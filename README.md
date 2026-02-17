@@ -2,6 +2,17 @@
 
 A self-hostable voice, video, and chat application. Built with Express, Socket.IO, mediasoup, React, and Electron.
 
+![Echo](screenshots/echo1.png)
+
+## Features
+
+- **Self-Hosted** — Run it on your own server. Your data stays yours.
+- **Chat** — Channels, threads, reactions, pins, mentions, GIFs, and file uploads.
+- **Voice** — Low-latency voice channels powered by mediasoup/WebRTC.
+- **Screen Share** — Share your screen with anyone in a voice channel.
+- **Webcam** — Video calls with multiple participants.
+- **Familiar Interface** — Simple, clean UI that feels like home if you've used Discord.
+
 ## Self-Hosting
 
 ### Requirements
@@ -12,7 +23,7 @@ A self-hostable voice, video, and chat application. Built with Express, Socket.I
 ### Quick Start
 
 ```bash
-git clone https://github.com/your-org/echo.git
+git clone https://github.com/jkleincodes/echo.git
 cd echo
 cp .env.example .env
 ```
