@@ -1,0 +1,16 @@
+node_modules/
+dist/
+out/
+web/dist/
+*.db
+*.db-journal
+.env
+.env.local
+.env.production
+client/.env.production
+*.pem
+*.md
+!README.md
+build-and-deploy.sh
+server/data/uploads/
+.playwright-mcp/

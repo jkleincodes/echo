@@ -1,0 +1,52 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "3001:3001"
+      - "10000-10100:10000-10100/udp"
+    volumes:
+      - ./server/data:/app/data
+    environment:
+      DATABASE_URL: "file:/app/data/echo.db"
+      JWT_SECRET: "${JWT_SECRET:-}"
+      PORT: "3001"
+      MEDIASOUP_ANNOUNCED_IP: "${MEDIASOUP_ANNOUNCED_IP:-127.0.0.1}"
+      UPLOAD_DIR: "/app/data/uploads"
+      DOWNLOADS_DIR: "/app/data/downloads"
+      WEB_DIR: "/app/web/dist"
+      RESEND_API_KEY: "${RESEND_API_KEY:-}"
+      APP_URL: "${APP_URL:-http://localhost:3001}"
+      EMAIL_FROM: "${EMAIL_FROM:-Echo <noreply@localhost>}"
+      GIPHY_API_KEY: "${GIPHY_API_KEY:-}"
+      APP_VERSION: "${APP_VERSION:-1.0.0}"
+      APP_DOWNLOAD_URL: "${APP_DOWNLOAD_URL:-}"
+      APP_RELEASE_NOTES: "${APP_RELEASE_NOTES:-}"
+    networks:
+      - echo-net
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    profiles: ["https"]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: "${DOMAIN:-localhost}"
+    networks:
+      - echo-net
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  echo-net:

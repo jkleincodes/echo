@@ -1,0 +1,45 @@
+{
+  "name": "echo-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "RTC_MIN_PORT=20000 RTC_MAX_PORT=20100 tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.3.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.2.1",
+    "file-type": "^21.3.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mediasoup": "^3.15.3",
+    "multer": "^2.0.2",
+    "otpauth": "^9.5.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "qrcode": "^1.5.4",
+    "resend": "^6.9.2",
+    "socket.io": "^4.8.1",
+    "unfurl.js": "^6.4.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^22.12.0",
+    "@types/qrcode": "^1.5.6",
+    "prisma": "^6.3.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

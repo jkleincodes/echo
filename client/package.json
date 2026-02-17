@@ -1,0 +1,78 @@
+{
+  "name": "echo-client",
+  "private": true,
+  "version": "1.0.10",
+  "type": "module",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "pack:win": "electron-vite build && electron-builder --win portable --x64",
+    "pack:mac": "electron-vite build && electron-builder --mac dmg",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "build": {
+    "appId": "com.echo.app",
+    "productName": "Echo",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "target": "dmg",
+      "artifactName": "Echo.${ext}",
+      "icon": "resources/icon.icns",
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "resources/icon.ico"
+    },
+    "portable": {
+      "artifactName": "Echo.exe"
+    }
+  },
+  "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
+    "@sapphi-red/web-noise-suppressor": "^0.3.5",
+    "@tailwindcss/postcss": "^4.1.18",
+    "axios": "^1.7.9",
+    "emoji-mart": "^5.6.0",
+    "lucide-react": "^0.474.0",
+    "mediasoup-client": "^3.7.17",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-easy-crop": "^5.5.6",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.1.3",
+    "remark-gfm": "^4.0.1",
+    "socket.io-client": "^4.8.1",
+    "vite": "^6.4.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.6",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^35.7.5",
+    "electron-builder": "^26.7.0",
+    "electron-vite": "^3.1.0",
+    "jsdom": "^26.1.0",
+    "tailwindcss": "^4.0.6",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
+  }
+}
