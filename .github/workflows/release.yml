@@ -113,22 +113,21 @@ jobs:
         run: |
           tailscale ssh ${DEPLOY_SSH} "cd ~/talktogether && if grep -q '^APP_VERSION=' .env 2>/dev/null; then sed -i 's/^APP_VERSION=.*/APP_VERSION=${{ steps.version.outputs.version }}/' .env; else echo 'APP_VERSION=${{ steps.version.outputs.version }}' >> .env; fi && docker compose up -d"
 
-      - name: Upload client builds to server
-        run: |
-          cat client-builds/client/dist/Echo.dmg | tailscale ssh ${DEPLOY_SSH} "cat > ~/talktogether/server/data/downloads/Echo.dmg"
-          cat client-builds/client/dist/Echo.exe | tailscale ssh ${DEPLOY_SSH} "cat > ~/talktogether/server/data/downloads/Echo.exe"
-
       - name: Attach builds to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ls -R client-builds/
           DMG=$(find client-builds -name "Echo.dmg" | head -1)
           EXE=$(find client-builds -name "Echo.exe" | head -1)
           gh release upload "${{ github.event.release.tag_name }}" \
             "$DMG" \
             "$EXE" \
             --clobber
+
+      - name: Upload client builds to server
+        run: |
+          REPO_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}"
+          tailscale ssh ${DEPLOY_SSH} "curl -L -o ~/talktogether/server/data/downloads/Echo.dmg '${REPO_URL}/Echo.dmg' && curl -L -o ~/talktogether/server/data/downloads/Echo.exe '${REPO_URL}/Echo.exe'"
 
       - name: Verify deployment
         run: |
