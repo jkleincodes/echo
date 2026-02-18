@@ -13,6 +13,14 @@ A self-hostable voice, video, and chat application. Built with Express, Socket.I
 - **Webcam** — Video calls with multiple participants.
 - **Familiar Interface** — Simple, clean UI that feels like home if you've used Discord.
 
+## Try Echo Instantly
+
+Free forever, use the public Echo instance:  
+[https://talkwithecho.org](https://talkwithecho.org)
+
+No install required — just open the link in your browser and start chatting!
+⚠️ **Warning:** Your login, servers, and friends will not transfer to private instances!
+
 ## Self-Hosting
 
 You can use your own backend with the official Echo clients, or build your own clients and distribute them yourself.
