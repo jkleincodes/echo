@@ -9,6 +9,7 @@ web/dist/
 .env.production
 client/.env.production
 *.pem
+github_actions_key
 *.md
 !README.md
 build-and-deploy.sh

@@ -1,0 +1,181 @@
+name: Release & Deploy
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Job 1: Build macOS DMG and Windows EXE
+  # ──────────────────────────────────────────────
+  build-clients:
+    if: github.event.release.target_commitish == 'main'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Bump client version
+        working-directory: client
+        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Install dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build macOS DMG
+        working-directory: client
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run pack:mac
+
+      - name: Build Windows EXE
+        working-directory: client
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run pack:win
+
+      - name: Upload client builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-builds
+          path: |
+            client/dist/Echo.dmg
+            client/dist/Echo.exe
+          retention-days: 5
+
+  # ──────────────────────────────────────────────
+  # Job 2: Deploy server + upload client builds
+  # ──────────────────────────────────────────────
+  deploy:
+    needs: build-clients
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Download client builds
+        uses: actions/download-artifact@v4
+        with:
+          name: client-builds
+          path: client-builds
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create and upload source tarball
+        run: |
+          tar czf /tmp/talktogether.tar.gz \
+            --exclude='node_modules' \
+            --exclude='dist' \
+            --exclude='out' \
+            --exclude='.git' \
+            --exclude='*.db' \
+            --exclude='*.db-journal' \
+            --exclude='*.pem' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='server/data' \
+            --exclude='client/dist' \
+            --exclude='web/dist' \
+            .
+          scp -i ~/.ssh/deploy_key \
+            /tmp/talktogether.tar.gz \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
+
+      - name: Deploy server
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            cd ~/talktogether
+            tar xzf /tmp/talktogether.tar.gz
+            rm /tmp/talktogether.tar.gz
+            docker compose up -d --build
+          EOF
+
+      - name: Update APP_VERSION on server
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
+            cd ~/talktogether
+            if grep -q '^APP_VERSION=' .env 2>/dev/null; then
+              sed -i 's/^APP_VERSION=.*/APP_VERSION=${{ steps.version.outputs.version }}/' .env
+            else
+              echo 'APP_VERSION=${{ steps.version.outputs.version }}' >> .env
+            fi
+            docker compose up -d
+          EOF
+
+      - name: Upload client builds to server
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            client-builds/client/dist/Echo.dmg \
+            client-builds/client/dist/Echo.exe \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/talktogether/server/data/downloads/
+
+      - name: Attach builds to GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            client-builds/client/dist/Echo.dmg \
+            client-builds/client/dist/Echo.exe \
+            --clobber
+
+      - name: Verify deployment
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            echo "=== Docker containers ==="
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            echo ""
+            echo "=== Downloads directory ==="
+            ls -lh ~/talktogether/server/data/downloads/
+          EOF
+
+  # ──────────────────────────────────────────────
+  # Job 3: Commit version bump back to main
+  # ──────────────────────────────────────────────
+  commit-version:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Bump client/package.json version
+        working-directory: client
+        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add client/package.json
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: bump client version to ${{ steps.version.outputs.version }}"
+          git push
