@@ -85,6 +85,12 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
+      - name: Debug Tailscale connectivity
+        run: |
+          tailscale status
+          tailscale ping ${{ secrets.SERVER_HOST }} --timeout 15s || true
+          ssh -v -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo connected" 2>&1 || true
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
