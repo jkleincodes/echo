@@ -9,7 +9,8 @@ permissions:
 
 env:
   NODE_VERSION: "20"
-  DEPLOY_TARGET: ubuntu@ip-172-31-39-151
+  DEPLOY_HOST: ip-172-31-39-151
+  DEPLOY_SSH: ubuntu@ip-172-31-39-151
 
 jobs:
   # ──────────────────────────────────────────────
@@ -102,21 +103,21 @@ jobs:
             --exclude='client/dist' \
             --exclude='web/dist' \
             .
-          tailscale file cp /tmp/talktogether.tar.gz ${DEPLOY_TARGET}:
+          tailscale file cp /tmp/talktogether.tar.gz ${DEPLOY_HOST}:
 
       - name: Deploy server
         run: |
-          tailscale ssh ${DEPLOY_TARGET} "cd ~/talktogether && tailscale file get . && mv talktogether.tar.gz /tmp/ && tar xzf /tmp/talktogether.tar.gz && rm /tmp/talktogether.tar.gz && docker compose up -d --build"
+          tailscale ssh ${DEPLOY_SSH} "cd ~/talktogether && tailscale file get . && mv talktogether.tar.gz /tmp/ && tar xzf /tmp/talktogether.tar.gz && rm /tmp/talktogether.tar.gz && docker compose up -d --build"
 
       - name: Update APP_VERSION on server
         run: |
-          tailscale ssh ${DEPLOY_TARGET} "cd ~/talktogether && if grep -q '^APP_VERSION=' .env 2>/dev/null; then sed -i 's/^APP_VERSION=.*/APP_VERSION=${{ steps.version.outputs.version }}/' .env; else echo 'APP_VERSION=${{ steps.version.outputs.version }}' >> .env; fi && docker compose up -d"
+          tailscale ssh ${DEPLOY_SSH} "cd ~/talktogether && if grep -q '^APP_VERSION=' .env 2>/dev/null; then sed -i 's/^APP_VERSION=.*/APP_VERSION=${{ steps.version.outputs.version }}/' .env; else echo 'APP_VERSION=${{ steps.version.outputs.version }}' >> .env; fi && docker compose up -d"
 
       - name: Upload client builds to server
         run: |
-          tailscale file cp client-builds/client/dist/Echo.dmg ${DEPLOY_TARGET}:
-          tailscale file cp client-builds/client/dist/Echo.exe ${DEPLOY_TARGET}:
-          tailscale ssh ${DEPLOY_TARGET} "cd ~/talktogether/server/data/downloads && tailscale file get ."
+          tailscale file cp client-builds/client/dist/Echo.dmg ${DEPLOY_HOST}:
+          tailscale file cp client-builds/client/dist/Echo.exe ${DEPLOY_HOST}:
+          tailscale ssh ${DEPLOY_SSH} "cd ~/talktogether/server/data/downloads && tailscale file get ."
 
       - name: Attach builds to GitHub release
         env:
@@ -129,7 +130,7 @@ jobs:
 
       - name: Verify deployment
         run: |
-          tailscale ssh ${DEPLOY_TARGET} "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && echo '' && echo '=== Downloads ===' && ls -lh ~/talktogether/server/data/downloads/"
+          tailscale ssh ${DEPLOY_SSH} "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && echo '' && echo '=== Downloads ===' && ls -lh ~/talktogether/server/data/downloads/"
 
   # ──────────────────────────────────────────────
   # Job 3: Commit version bump back to main
