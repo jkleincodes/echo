@@ -103,6 +103,9 @@ export default function MessageItem({ message, showHeader, isThreadContext }: Pr
     if (!showReactionPicker) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (actionBarRef.current && !actionBarRef.current.contains(e.target as Node)) {
+        // Don't close if the click is inside the portaled emoji picker
+        const target = e.target as HTMLElement;
+        if (target.closest?.('[data-emoji-picker]')) return;
         setShowReactionPicker(false);
       }
     };

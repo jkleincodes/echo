@@ -130,3 +130,7 @@ cd client && npm install && npm run dev
 ```
 
 The server runs on port 3001. The web dev server proxies API requests to it automatically.
+
+### Notes On AI
+
+AI is used to develop Echo. If you plan on making PRs please specify the model used. PRs without coding model designation will be rejected. Please strive for at least Opus 4.5 or GPT 5.2 level intelligence.

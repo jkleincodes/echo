@@ -217,22 +217,24 @@ export default function LandingPage() {
 
         <div className="relative flex flex-col items-center gap-12 md:flex-row md:justify-between md:gap-0">
           {/* Dashed connector line — desktop only */}
-          <svg
-            className="pointer-events-none absolute top-10 right-[17%] left-[17%] hidden md:block"
-            height="4"
-            preserveAspectRatio="none"
-          >
-            <line
-              x1="0"
-              y1="2"
-              x2="100%"
-              y2="2"
-              stroke="rgba(255,255,255,0.12)"
-              strokeWidth="2"
-              strokeDasharray="8 6"
-              style={{ animation: 'dash-flow 1s linear infinite' }}
-            />
-          </svg>
+          <div className="pointer-events-none absolute top-10 right-[0%] left-[0%] hidden md:block">
+            <svg
+              width="100%"
+              height="4"
+              preserveAspectRatio="none"
+            >
+              <line
+                x1="0"
+                y1="2"
+                x2="100%"
+                y2="2"
+                stroke="rgba(255,255,255,0.12)"
+                strokeWidth="2"
+                strokeDasharray="8 6"
+                style={{ animation: 'dash-flow 1s linear infinite' }}
+              />
+            </svg>
+          </div>
 
           {steps.map((s) => (
             <div
@@ -277,11 +279,11 @@ export default function LandingPage() {
               <div className="p-5 font-mono text-sm leading-7 text-ec-text-secondary">
                 <p>
                   <span className="text-green">$</span>{' '}
-                  git clone &lt;repo-url&gt;
+                  git clone https://github.com/jkleincodes/echo.git
                 </p>
                 <p>
                   <span className="text-green">$</span>{' '}
-                  cd talktogether
+                  cd echo
                 </p>
                 <p>
                   <span className="text-green">$</span>{' '}
@@ -312,14 +314,19 @@ export default function LandingPage() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-ec-text-secondary">
                   <ShieldCheck size={16} className="text-green" />
-                  MIT Licensed
+                  AGPL v3 Licensed
                 </div>
               </div>
 
-              <span className="inline-flex items-center gap-2 rounded-full bg-ec-bg-tertiary px-6 py-3 font-medium text-ec-text-muted">
+              <a
+                href="https://github.com/jkleincodes/echo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-ec-bg-tertiary px-6 py-3 font-medium text-ec-text-secondary transition-all hover:-translate-y-0.5 hover:text-ec-text-primary"
+              >
                 <Github size={18} />
-                GitHub — coming soon
-              </span>
+                View on GitHub
+              </a>
             </div>
           </div>
         </div>
@@ -337,7 +344,7 @@ export default function LandingPage() {
             Ready to get started?
           </h2>
           <p className="max-w-md text-white/80">
-            Create your first server in seconds. No credit card, no catch.
+            Use Echo on the official Echo backend (enabled by default) or self-host your own.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link

@@ -67,6 +67,7 @@ export default function EmojiPicker({ onSelect, onClose, direction = 'down' }: P
           <div
             ref={pickerRef}
             className="fixed z-[9999]"
+            data-emoji-picker
             style={{ top: pos.top, left: pos.left }}
           >
             <Picker

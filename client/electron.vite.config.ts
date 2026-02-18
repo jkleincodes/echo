@@ -27,7 +27,7 @@ export default defineConfig({
     plugins: [react()],
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
-      __DEFAULT_SERVER_URL__: JSON.stringify(process.env.DEFAULT_SERVER_URL || 'https://echo.fdr.sh'),
+      __DEFAULT_SERVER_URL__: JSON.stringify(process.env.DEFAULT_SERVER_URL || 'https://talkwithecho.org'),
     },
   },
 });
