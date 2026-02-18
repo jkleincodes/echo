@@ -103,11 +103,11 @@ jobs:
             --exclude='client/dist' \
             --exclude='web/dist' \
             .
-          tailscale file cp /tmp/talktogether.tar.gz ${DEPLOY_HOST}:
+          cat /tmp/talktogether.tar.gz | tailscale ssh ${DEPLOY_SSH} "cat > /tmp/talktogether.tar.gz"
 
       - name: Deploy server
         run: |
-          tailscale ssh ${DEPLOY_SSH} "cd ~/talktogether && tailscale file get . && mv talktogether.tar.gz /tmp/ && tar xzf /tmp/talktogether.tar.gz && rm /tmp/talktogether.tar.gz && docker compose up -d --build"
+          tailscale ssh ${DEPLOY_SSH} "cd ~/talktogether && tar xzf /tmp/talktogether.tar.gz && rm /tmp/talktogether.tar.gz && docker compose up -d --build"
 
       - name: Update APP_VERSION on server
         run: |
@@ -115,9 +115,8 @@ jobs:
 
       - name: Upload client builds to server
         run: |
-          tailscale file cp client-builds/client/dist/Echo.dmg ${DEPLOY_HOST}:
-          tailscale file cp client-builds/client/dist/Echo.exe ${DEPLOY_HOST}:
-          tailscale ssh ${DEPLOY_SSH} "cd ~/talktogether/server/data/downloads && tailscale file get ."
+          cat client-builds/client/dist/Echo.dmg | tailscale ssh ${DEPLOY_SSH} "cat > ~/talktogether/server/data/downloads/Echo.dmg"
+          cat client-builds/client/dist/Echo.exe | tailscale ssh ${DEPLOY_SSH} "cat > ~/talktogether/server/data/downloads/Echo.exe"
 
       - name: Attach builds to GitHub release
         env:
