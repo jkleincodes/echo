@@ -15,10 +15,16 @@ A self-hostable voice, video, and chat application. Built with Express, Socket.I
 
 ## Self-Hosting
 
+You can use your own backend with the official Echo clients, or build your own clients and distribute them yourself.
+
+## Self-Hosting Backend Infrastructure
+
 ### Requirements
 
 - Docker and Docker Compose
-- A server with a public IP (for voice/video to work outside localhost)
+- A server with a public IP (for voice/video to work you need UDP)
+
+Note: Cloudflare proxy will not work on the free plan.
 
 ### Quick Start
 
@@ -26,6 +32,7 @@ A self-hostable voice, video, and chat application. Built with Express, Socket.I
 git clone https://github.com/jkleincodes/echo.git
 cd echo
 cp .env.example .env
+docker compose up -d
 ```
 
 Edit `.env` and set `MEDIASOUP_ANNOUNCED_IP` to your server's public IP address (or `127.0.0.1` for local-only use):
@@ -72,6 +79,8 @@ The Electron desktop client can connect to any Echo server:
 2. Click **Advanced** at the bottom
 3. Enter your server URL (e.g. `https://echo.example.com`)
 4. Log in as usual
+
+Security Note: Ensure that you trust the authentication server before logging in. Wouldn't want your password stolen!
 
 ### Environment Variables
 
