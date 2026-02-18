@@ -122,9 +122,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          ls -R client-builds/
+          DMG=$(find client-builds -name "Echo.dmg" | head -1)
+          EXE=$(find client-builds -name "Echo.exe" | head -1)
           gh release upload "${{ github.event.release.tag_name }}" \
-            client-builds/client/dist/Echo.dmg \
-            client-builds/client/dist/Echo.exe \
+            "$DMG" \
+            "$EXE" \
             --clobber
 
       - name: Verify deployment
