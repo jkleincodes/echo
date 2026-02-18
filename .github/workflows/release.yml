@@ -83,7 +83,14 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          printf '%s\n' \
+            "Host deploy" \
+            "  HostName ${{ secrets.SERVER_HOST }}" \
+            "  User ${{ secrets.SERVER_USER }}" \
+            "  IdentityFile ~/.ssh/deploy_key" \
+            "  StrictHostKeyChecking no" \
+            > ~/.ssh/config
+          chmod 600 ~/.ssh/config
 
       - name: Create and upload source tarball
         run: |
@@ -101,13 +108,11 @@ jobs:
             --exclude='client/dist' \
             --exclude='web/dist' \
             .
-          scp -i ~/.ssh/deploy_key \
-            /tmp/talktogether.tar.gz \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
+          scp /tmp/talktogether.tar.gz deploy:/tmp/
 
       - name: Deploy server
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh deploy << 'EOF'
             cd ~/talktogether
             tar xzf /tmp/talktogether.tar.gz
             rm /tmp/talktogether.tar.gz
@@ -116,7 +121,7 @@ jobs:
 
       - name: Update APP_VERSION on server
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
+          ssh deploy << EOF
             cd ~/talktogether
             if grep -q '^APP_VERSION=' .env 2>/dev/null; then
               sed -i 's/^APP_VERSION=.*/APP_VERSION=${{ steps.version.outputs.version }}/' .env
@@ -128,10 +133,10 @@ jobs:
 
       - name: Upload client builds to server
         run: |
-          scp -i ~/.ssh/deploy_key \
+          scp \
             client-builds/client/dist/Echo.dmg \
             client-builds/client/dist/Echo.exe \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/talktogether/server/data/downloads/
+            deploy:~/talktogether/server/data/downloads/
 
       - name: Attach builds to GitHub release
         env:
@@ -144,7 +149,7 @@ jobs:
 
       - name: Verify deployment
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh deploy << 'EOF'
             echo "=== Docker containers ==="
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             echo ""
