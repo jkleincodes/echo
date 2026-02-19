@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { socketService } from '../../services/socketService';
 import Avatar from '../ui/Avatar';
 import FormattedContent from '../chat/FormattedContent';
+import ImageViewerModal from '../modals/ImageViewerModal';
 import type { DMMessage } from '../../../../../shared/types';
 
 const GIPHY_URL_REGEX = /^https?:\/\/(media\d*\.giphy\.com|i\.giphy\.com)\/media\/[^\s]+$/i;
@@ -108,6 +109,7 @@ interface DMMessageItemProps {
 function DMMessageItem({ message, showHeader, isOwn }: DMMessageItemProps) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [gifViewerOpen, setGifViewerOpen] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -178,12 +180,14 @@ function DMMessageItem({ message, showHeader, isOwn }: DMMessageItemProps) {
       </p>
     </div>
   ) : gifMessage ? (
-    <img
-      src={message.content.trim()}
-      alt="GIF"
-      className="mt-1 max-h-[300px] max-w-[400px] rounded"
-      loading="lazy"
-    />
+    <button type="button" className="block cursor-pointer" onClick={() => setGifViewerOpen(true)}>
+      <img
+        src={message.content.trim()}
+        alt="GIF"
+        className="mt-1 max-h-[300px] max-w-[400px] rounded"
+        loading="lazy"
+      />
+    </button>
   ) : (
     <>
       <FormattedContent content={message.content} />
@@ -214,6 +218,14 @@ function DMMessageItem({ message, showHeader, isOwn }: DMMessageItemProps) {
     </div>
   );
 
+  const gifViewer = gifViewerOpen ? (
+    <ImageViewerModal
+      src={message.content.trim()}
+      alt="GIF"
+      onClose={() => setGifViewerOpen(false)}
+    />
+  ) : null;
+
   if (showHeader) {
     return (
       <div className="group relative mt-4 flex gap-4 px-4 py-0.5 hover:bg-ec-bg-modifier-hover">
@@ -234,6 +246,7 @@ function DMMessageItem({ message, showHeader, isOwn }: DMMessageItemProps) {
           {contentBlock}
         </div>
         {actionBar}
+        {gifViewer}
       </div>
     );
   }
@@ -249,6 +262,7 @@ function DMMessageItem({ message, showHeader, isOwn }: DMMessageItemProps) {
         {contentBlock}
       </div>
       {actionBar}
+      {gifViewer}
     </div>
   );
 }

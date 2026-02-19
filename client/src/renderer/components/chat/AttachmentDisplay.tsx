@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Download, FileText } from 'lucide-react';
 import type { Attachment } from '../../../../../shared/types';
 import { getServerUrl } from '../../lib/serverUrl';
+import ImageViewerModal from '../modals/ImageViewerModal';
 
 interface Props {
   attachments: Attachment[];
@@ -17,6 +19,8 @@ function isImage(mimeType: string): boolean {
 }
 
 export default function AttachmentDisplay({ attachments }: Props) {
+  const [viewerImage, setViewerImage] = useState<{ src: string; alt: string } | null>(null);
+
   if (!attachments.length) return null;
 
   return (
@@ -26,12 +30,11 @@ export default function AttachmentDisplay({ attachments }: Props) {
 
         if (isImage(att.mimeType)) {
           return (
-            <a
+            <button
               key={att.id}
-              href={fullUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
+              type="button"
+              className="block cursor-pointer"
+              onClick={() => setViewerImage({ src: fullUrl, alt: att.filename })}
             >
               <img
                 src={fullUrl}
@@ -39,7 +42,7 @@ export default function AttachmentDisplay({ attachments }: Props) {
                 className="max-h-[300px] max-w-[400px] rounded-lg object-contain"
                 loading="lazy"
               />
-            </a>
+            </button>
           );
         }
 
@@ -61,6 +64,14 @@ export default function AttachmentDisplay({ attachments }: Props) {
           </a>
         );
       })}
+
+      {viewerImage && (
+        <ImageViewerModal
+          src={viewerImage.src}
+          alt={viewerImage.alt}
+          onClose={() => setViewerImage(null)}
+        />
+      )}
     </div>
   );
 }

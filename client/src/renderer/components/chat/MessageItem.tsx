@@ -13,6 +13,7 @@ import AttachmentDisplay from './AttachmentDisplay';
 import ReactionBar from './ReactionBar';
 import LinkEmbed from './LinkEmbed';
 import EmojiPicker from './EmojiPicker';
+import ImageViewerModal from '../modals/ImageViewerModal';
 import type { Message, Role } from '../../../../../shared/types';
 
 const GIPHY_URL_REGEX = /^https?:\/\/(media\d*\.giphy\.com|i\.giphy\.com)\/media\/[^\s]+$/i;
@@ -89,6 +90,7 @@ export default function MessageItem({ message, showHeader, isThreadContext }: Pr
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [gifViewerOpen, setGifViewerOpen] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
   const actionBarRef = useRef<HTMLDivElement>(null);
 
@@ -273,12 +275,14 @@ export default function MessageItem({ message, showHeader, isThreadContext }: Pr
       </p>
     </div>
   ) : gifMessage ? (
-    <img
-      src={message.content.trim()}
-      alt="GIF"
-      className="mt-1 max-h-[300px] max-w-[400px] rounded"
-      loading="lazy"
-    />
+    <button type="button" className="block cursor-pointer" onClick={() => setGifViewerOpen(true)}>
+      <img
+        src={message.content.trim()}
+        alt="GIF"
+        className="mt-1 max-h-[300px] max-w-[400px] rounded"
+        loading="lazy"
+      />
+    </button>
   ) : (
     <>
       <FormattedContent content={message.content} mentions={message.mentions} />
@@ -359,6 +363,13 @@ export default function MessageItem({ message, showHeader, isThreadContext }: Pr
       ))}
       <ReactionBar messageId={message.id} reactions={message.reactions} isThreadContext={isThreadContext} threadId={message.threadId} />
       {threadIndicator}
+      {gifViewerOpen && (
+        <ImageViewerModal
+          src={message.content.trim()}
+          alt="GIF"
+          onClose={() => setGifViewerOpen(false)}
+        />
+      )}
     </>
   );
 
