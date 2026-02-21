@@ -94,9 +94,12 @@ export default function ChannelSidebar() {
     });
   };
 
+  const setVideoOverlayOpen = useVoiceStore((s) => s.setVideoOverlayOpen);
+
   const handleChannelClick = (channelId: string, type: string) => {
     if (type === 'text') {
       setActiveChannel(channelId);
+      setVideoOverlayOpen(false);
     } else {
       joinVoice(channelId).catch(console.error);
     }
