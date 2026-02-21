@@ -24,10 +24,12 @@
       "out/**/*",
       "node_modules/**/*"
     ],
+    "afterPack": "./build/afterPack.cjs",
     "mac": {
       "target": "dmg",
       "artifactName": "Echo.${ext}",
       "icon": "resources/icon.icns",
+      "identity": null,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
