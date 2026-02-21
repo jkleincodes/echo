@@ -1,7 +1,7 @@
 {
   "name": "echo-client",
   "private": true,
-  "version": "1.0.15b",
+  "version": "1.0.15-b",
   "type": "module",
   "main": "out/main/index.js",
   "scripts": {
