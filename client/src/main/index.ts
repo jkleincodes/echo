@@ -94,20 +94,36 @@ function createWindow() {
     });
   });
 
-  // Set CSP programmatically — more reliable than meta tag across platforms
-  // In dev mode, Vite injects inline scripts for React Fast Refresh that strict CSP blocks
-  if (!isDev) {
-    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' blob:; script-src-elem 'self' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; connect-src 'self' ws: wss: http: https:; media-src 'self' blob: data:;",
-          ],
-        },
-      });
+  // Single CSP source of truth — applied programmatically for both dev and prod.
+  // Dev adds 'unsafe-inline' for Vite's HMR/React Fast Refresh inline scripts.
+  const scriptSrc = isDev
+    ? "'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:"
+    : "'self' 'wasm-unsafe-eval' 'unsafe-eval' blob:";
+  const scriptSrcElem = isDev
+    ? "'self' 'unsafe-inline' blob:"
+    : "'self' blob:";
+  const connectSrc = isDev
+    ? "'self' ws: wss: http: https:"
+    : "'self' ws: wss: http: https:";
+  const csp = [
+    `default-src 'self'`,
+    `script-src ${scriptSrc}`,
+    `script-src-elem ${scriptSrcElem}`,
+    `worker-src 'self' blob:`,
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' data: blob: http: https:`,
+    `connect-src ${connectSrc}`,
+    `media-src 'self' blob: data:`,
+  ].join('; ') + ';';
+
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp],
+      },
     });
-  }
+  });
 
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
