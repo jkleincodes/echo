@@ -14,6 +14,7 @@ import { useThreadStore } from '../stores/threadStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { api } from '../lib/api';
 import { playbackSoundboardSound } from '../lib/soundboardPlayback';
+import { playSoundEffect } from '../lib/soundEffects';
 import type { Message, Channel, Member, Reaction, Embed, Server, Friendship, DMChannel, DMMessage, UserVoiceState, UserMediaState, User, Thread, NotificationPayload } from '../../../../shared/types';
 
 export function useSocket() {
@@ -118,12 +119,20 @@ export function useSocket() {
       'voice:user-joined': (data: { userId: string; channelId: string }) => {
         addParticipant(data.userId);
         addChannelParticipant(data.channelId, data.userId);
+        // Play sound if we're in the same channel
+        if (useVoiceStore.getState().channelId === data.channelId) {
+          playSoundEffect('userJoin');
+        }
       },
       'voice:user-left': (data: { userId: string; channelId: string }) => {
         removeParticipant(data.userId);
         removeChannelParticipant(data.channelId, data.userId);
         removeUserVoiceState(data.userId);
         removeUserMediaState(data.userId);
+        // Play sound if we're in the same channel
+        if (useVoiceStore.getState().channelId === data.channelId) {
+          playSoundEffect('userLeave');
+        }
       },
       'voice:voice-state-update': (data: { userId: string; muted: boolean; deafened: boolean }) => {
         setUserVoiceState(data.userId, { muted: data.muted, deafened: data.deafened });
@@ -319,6 +328,8 @@ export function useSocket() {
       'notification:push': (data: NotificationPayload) => {
         // Skip if desktop notifications are disabled
         if (!useNotificationStore.getState().desktopNotificationsEnabled) return;
+
+        playSoundEffect('notification');
 
         // Skip if user is currently viewing the channel/DM/thread AND window is focused
         const activeChannelId = useServerStore.getState().activeChannelId;

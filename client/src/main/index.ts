@@ -102,7 +102,7 @@ function createWindow() {
         responseHeaders: {
           ...details.responseHeaders,
           'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' blob:; script-src-elem 'self' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; connect-src 'self' ws: wss: http: https:; media-src 'self' blob:;",
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' blob:; script-src-elem 'self' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; connect-src 'self' ws: wss: http: https:; media-src 'self' blob: data:;",
           ],
         },
       });

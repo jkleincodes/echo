@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useServerStore } from '../stores/serverStore';
 import { socketService } from '../services/socketService';
 import type { ProducerMediaType } from '../../../../shared/types';
+import { playSoundEffect } from '../lib/soundEffects';
 
 export function useVoice() {
   const { connected, channelId, muted, deafened, cameraOn, screenSharing, screenSharePickerOpen, videoOverlayOpen, screenAudioMuted, setConnected, setMuted, setDeafened, setSpeaking, addParticipant, removeParticipant, addChannelParticipant, removeChannelParticipant, setUserVoiceState, setCameraOn, setScreenSharing, setScreenSharePickerOpen, setVideoOverlayOpen, setRemoteVideoStream, removeRemoteVideoStream, setLocalVideoStream, setLocalScreenStream, setUserMediaState, setScreenAudioMuted, resetLocal } = useVoiceStore();
@@ -84,6 +85,10 @@ export function useVoice() {
     }
     setConnected(true, targetChannelId);
 
+    if (!isSwitching) {
+      playSoundEffect('voiceJoin');
+    }
+
     // Restore mute/deafen state when switching channels
     const restoredMuted = isSwitching ? prevMuted : false;
     const restoredDeafened = isSwitching ? prevDeafened : false;
@@ -118,6 +123,7 @@ export function useVoice() {
     if (currentUserId) {
       setUserMediaState(currentUserId, { cameraOn: false, screenSharing: false });
     }
+    playSoundEffect('voiceLeave');
     // Reset only local voice state, preserve global channelParticipants/userVoiceStates/userMediaStates
     // so the sidebar continues to show other users in voice channels
     resetLocal();
@@ -127,6 +133,7 @@ export function useVoice() {
     const { muted: newMuted, deafened: newDeafened } = voiceService.toggleMute();
     setMuted(newMuted);
     setDeafened(newDeafened);
+    playSoundEffect(newMuted ? 'mute' : 'unmute');
     // Broadcast voice state to others
     const socket = socketService.getSocket();
     socket?.emit('voice:voice-state-update', { muted: newMuted, deafened: newDeafened });
@@ -140,6 +147,7 @@ export function useVoice() {
     const { muted: newMuted, deafened: newDeafened } = voiceService.toggleDeafen();
     setMuted(newMuted);
     setDeafened(newDeafened);
+    playSoundEffect(newDeafened ? 'deafen' : 'undeafen');
     // Broadcast voice state to others
     const socket = socketService.getSocket();
     socket?.emit('voice:voice-state-update', { muted: newMuted, deafened: newDeafened });
@@ -199,6 +207,7 @@ export function useVoice() {
       setLocalScreenStream(voiceService.getLocalScreenStream());
       setVideoOverlayOpen(true);
       setScreenSharePickerOpen(false);
+      playSoundEffect('streamStart');
       // Broadcast media state update
       const socket = socketService.getSocket();
       socket?.emit('voice:media-state-update', { cameraOn: store.cameraOn, screenSharing: true });
