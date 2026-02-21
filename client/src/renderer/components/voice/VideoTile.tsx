@@ -37,7 +37,7 @@ export default function VideoTile({ userId, stream, label, avatarUrl, featured, 
           autoPlay
           playsInline
           muted
-          className={`h-full w-full object-cover ${mirrored ? 'scale-x-[-1]' : ''}`}
+          className={`h-full w-full ${featured ? 'object-contain' : 'object-cover'} ${mirrored ? 'scale-x-[-1]' : ''}`}
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center">
