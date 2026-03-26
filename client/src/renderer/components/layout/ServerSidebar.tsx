@@ -1,18 +1,124 @@
-import { useState } from 'react';
-import { Plus, MessageCircle, ArrowDownToLine } from 'lucide-react';
+import { useState, type MouseEvent } from 'react';
+import { Plus, MessageCircle, ArrowDownToLine, BellOff, Bell, Settings, UserPlus, CheckCheck, LogOut } from 'lucide-react';
 import { useServerStore } from '../../stores/serverStore';
+import { useAuthStore } from '../../stores/authStore';
 import { useUnreadStore } from '../../stores/unreadStore';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { api } from '../../lib/api';
 import CreateServerModal from '../modals/CreateServerModal';
 import JoinServerModal from '../modals/JoinServerModal';
+import InviteModal from '../modals/InviteModal';
+import NotificationSettingsModal from '../modals/NotificationSettingsModal';
+import ContextMenu, { type ContextMenuItem } from '../ui/ContextMenu';
 import { getServerUrl } from '../../lib/serverUrl';
+import type { Server } from '../../../../../shared/types';
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  server: Server;
+}
 
 export default function ServerSidebar() {
   const { servers, activeServerId, showHome, setActiveServer, setShowHome } = useServerStore();
+  const currentUser = useAuthStore((s) => s.user);
   const unreads = useUnreadStore((s) => s.unreads);
   const notificationStore = useNotificationStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [inviteServerId, setInviteServerId] = useState<string | null>(null);
+  const [notifServerId, setNotifServerId] = useState<string | null>(null);
+
+  const handleServerContextMenu = (e: MouseEvent, server: Server) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, server });
+  };
+
+  const clearServerUnreads = (serverId: string) => {
+    const unreadStore = useUnreadStore.getState();
+    const toRemove: string[] = [];
+    for (const [channelId, info] of unreadStore.unreads) {
+      if (info.serverId === serverId) {
+        toRemove.push(channelId);
+      }
+    }
+    for (const channelId of toRemove) {
+      unreadStore.clearUnread(channelId);
+    }
+  };
+
+  const handleLeaveServer = async (serverId: string) => {
+    if (!confirm('Are you sure you want to leave this server?')) return;
+    try {
+      await api.delete(`/api/servers/${serverId}/leave`);
+      const serverStore = useServerStore.getState();
+      serverStore.fetchServers();
+      if (activeServerId === serverId) {
+        setShowHome(true);
+      }
+    } catch {
+      // leave failed
+    }
+  };
+
+  const getContextMenuItems = (): ContextMenuItem[] => {
+    if (!contextMenu) return [];
+    const { server } = contextMenu;
+    const isMuted = notificationStore.isServerMuted(server.id);
+    const isOwner = currentUser?.id === server.ownerId;
+    const { totalCount } = getServerUnread(server.id);
+
+    const items: ContextMenuItem[] = [];
+
+    // Mark as Read
+    if (totalCount > 0) {
+      items.push({
+        label: 'Mark as Read',
+        icon: <CheckCheck size={14} />,
+        onClick: () => clearServerUnreads(server.id),
+      });
+    }
+
+    // Mute / Unmute
+    items.push({
+      label: isMuted ? 'Unmute Server' : 'Mute Server',
+      icon: isMuted ? <Bell size={14} /> : <BellOff size={14} />,
+      onClick: () => {
+        if (isMuted) {
+          notificationStore.updateServerPreference(server.id, { muted: false, mutedUntil: null });
+        } else {
+          notificationStore.updateServerPreference(server.id, { muted: true, mutedUntil: null });
+        }
+      },
+    });
+
+    // Notification Settings
+    items.push({
+      label: 'Notification Settings',
+      icon: <Settings size={14} />,
+      onClick: () => setNotifServerId(server.id),
+    });
+
+    // Invite People
+    items.push({
+      label: 'Invite People',
+      icon: <UserPlus size={14} />,
+      onClick: () => setInviteServerId(server.id),
+    });
+
+    // Leave Server (not for owner)
+    if (!isOwner) {
+      items.push({
+        label: 'Leave Server',
+        icon: <LogOut size={14} />,
+        danger: true,
+        onClick: () => handleLeaveServer(server.id),
+      });
+    }
+
+    return items;
+  };
 
   const getServerUnread = (serverId: string) => {
     let totalCount = 0;
@@ -91,6 +197,7 @@ export default function ServerSidebar() {
               />
               <button
                 onClick={() => setActiveServer(server.id)}
+                onContextMenu={(e) => handleServerContextMenu(e, server)}
                 className={`relative flex h-12 w-12 items-center justify-center overflow-hidden text-lg font-semibold transition-all ${
                   isActive
                     ? server.iconUrl ? 'rounded-lg' : 'rounded-lg bg-accent text-white'
@@ -137,6 +244,16 @@ export default function ServerSidebar() {
 
       {showCreateModal && <CreateServerModal onClose={() => setShowCreateModal(false)} />}
       {showJoinModal && <JoinServerModal onClose={() => setShowJoinModal(false)} />}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={getContextMenuItems()}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+      {inviteServerId && <InviteModal serverId={inviteServerId} onClose={() => setInviteServerId(null)} />}
+      {notifServerId && <NotificationSettingsModal mode="server" serverId={notifServerId} onClose={() => setNotifServerId(null)} />}
     </>
   );
 }
