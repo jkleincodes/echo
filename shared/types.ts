@@ -27,6 +27,7 @@ export interface Server {
   ownerId: string;
   afkChannelId: string | null;
   afkTimeout: number;
+  isPublic?: boolean;
 }
 
 export interface Member {
@@ -254,6 +255,62 @@ export interface NotificationPayload {
   channelId: string;
   messageId: string;
   threadId?: string;
+}
+
+// ── Audit Log ──
+
+export type AuditActionType =
+  | 'server_update' | 'icon_update'
+  | 'channel_create' | 'channel_update' | 'channel_delete'
+  | 'category_create' | 'category_update' | 'category_delete'
+  | 'role_create' | 'role_update' | 'role_delete'
+  | 'member_kick' | 'member_ban' | 'member_unban'
+  | 'member_role_add' | 'member_role_remove';
+
+export interface AuditLogEntry {
+  id: string;
+  actionType: AuditActionType;
+  actorId: string;
+  targetId: string | null;
+  targetType: string | null;
+  changes: string | null;
+  reason: string | null;
+  serverId: string;
+  createdAt: string;
+  actor?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
+}
+
+// ── Server Discovery ──
+
+export interface DiscoverableServer {
+  id: string;
+  name: string;
+  iconUrl: string | null;
+  description: string | null;
+  memberCount: number;
+  isPublic: boolean;
+}
+
+// ── Scheduled Events ──
+
+export type EventStatus = 'scheduled' | 'active' | 'completed' | 'cancelled';
+export type RSVPStatus = 'interested' | 'going' | 'not_going';
+
+export interface ScheduledEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  startAt: string;
+  endAt: string | null;
+  location: string | null;
+  channelId: string | null;
+  creatorId: string;
+  serverId: string;
+  status: EventStatus;
+  createdAt: string;
+  creator?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
+  rsvpCounts?: { interested: number; going: number; not_going: number };
+  userRsvp?: RSVPStatus | null;
 }
 
 // ── Voice State ──

@@ -27,6 +27,7 @@ import soundboardRoutes from './routes/soundboard.js';
 import threadRoutes from './routes/threads.js';
 import { bulkRouter as notificationPrefBulkRoutes, scopedRouter as notificationPrefScopedRoutes } from './routes/notificationPreferences.js';
 import { webhookCrudRouter, webhookExecuteRouter } from './routes/webhooks.js';
+import eventRoutes from './routes/events.js';
 import { UPLOAD_DIR } from './lib/upload.js';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -181,6 +182,7 @@ app.use('/api/servers', threadRoutes);
 app.use('/api/notification-preferences', notificationPrefBulkRoutes);
 app.use('/api/servers', notificationPrefScopedRoutes);
 app.use('/api/servers', webhookCrudRouter);
+app.use('/api/servers', eventRoutes);
 app.use('/api/giphy', giphyRoutes);
 
 // Serve web SPA static files

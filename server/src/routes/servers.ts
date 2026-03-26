@@ -52,6 +52,46 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Discover public servers
+router.get('/discover', async (req, res) => {
+  const search = typeof req.query.search === 'string' ? req.query.search : undefined;
+  const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit || '20'), 10) || 20));
+  const skip = (page - 1) * limit;
+
+  const where: any = { isPublic: true };
+  if (search) {
+    where.OR = [
+      { name: { contains: search } },
+      { description: { contains: search } },
+    ];
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.server.findMany({
+      where,
+      include: { _count: { select: { members: true } } },
+      orderBy: { members: { _count: 'desc' } },
+      skip,
+      take: limit,
+    }),
+    prisma.server.count({ where }),
+  ]);
+
+  res.json({
+    data: data.map((s) => ({
+      id: s.id,
+      name: s.name,
+      iconUrl: s.iconUrl,
+      description: s.description,
+      memberCount: s._count.members,
+    })),
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  });
+});
+
 // Get server details (with channels and members)
 router.get('/:serverId', async (req, res) => {
   const member = await prisma.member.findUnique({
@@ -90,6 +130,12 @@ router.post('/:serverId/join', async (req, res) => {
   });
   if (!server) {
     res.status(404).json({ error: 'Server not found' });
+    return;
+  }
+
+  // If server is not public, require an invite (this endpoint is direct join)
+  if (!server.isPublic) {
+    res.status(403).json({ error: 'This server requires an invite to join' });
     return;
   }
 

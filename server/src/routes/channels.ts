@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { MESSAGE_INCLUDE, serializeMessage } from '../lib/serializers.js';
 import { upload, validateUploadedFiles } from '../lib/upload.js';
+import { logAuditAction } from '../lib/auditLog.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -49,6 +50,15 @@ router.post('/:serverId/channels', async (req, res) => {
         categoryId: body.categoryId || null,
       },
     });
+
+    logAuditAction({
+      actionType: 'channel_create',
+      actorId: req.userId!,
+      serverId: req.params.serverId,
+      targetId: channel.id,
+      targetType: 'channel',
+    });
+
     res.status(201).json({ data: channel });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -161,6 +171,23 @@ router.patch('/:serverId/channels/:channelId', async (req, res) => {
       },
     });
 
+    const channelChanges: Record<string, { old: unknown; new: unknown }> = {};
+    if (body.name !== undefined && body.name !== channel.name)
+      channelChanges.name = { old: channel.name, new: body.name };
+    if (body.topic !== undefined && body.topic !== channel.topic)
+      channelChanges.topic = { old: channel.topic, new: body.topic };
+
+    if (Object.keys(channelChanges).length > 0) {
+      logAuditAction({
+        actionType: 'channel_update',
+        actorId: req.userId!,
+        serverId: req.params.serverId,
+        targetId: req.params.channelId,
+        targetType: 'channel',
+        changes: channelChanges,
+      });
+    }
+
     // Broadcast channel update
     const { io } = await import('../index.js');
     io.emit('channel:updated', updatedChannel);
@@ -195,6 +222,14 @@ router.delete('/:serverId/channels/:channelId', async (req, res) => {
 
   await prisma.channel.delete({ where: { id: req.params.channelId } });
 
+  logAuditAction({
+    actionType: 'channel_delete',
+    actorId: req.userId!,
+    serverId: req.params.serverId,
+    targetId: req.params.channelId,
+    targetType: 'channel',
+  });
+
   // Broadcast channel deletion
   const { io } = await import('../index.js');
   io.emit('channel:deleted', { channelId: req.params.channelId, serverId: req.params.serverId });
@@ -228,6 +263,15 @@ router.post('/:serverId/categories', async (req, res) => {
         serverId: req.params.serverId,
       },
     });
+
+    logAuditAction({
+      actionType: 'category_create',
+      actorId: req.userId!,
+      serverId: req.params.serverId,
+      targetId: category.id,
+      targetType: 'category',
+    });
+
     res.status(201).json({ data: category });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -264,6 +308,24 @@ router.patch('/:serverId/categories/:categoryId', async (req, res) => {
         ...(body.position !== undefined && { position: body.position }),
       },
     });
+
+    const catChanges: Record<string, { old: unknown; new: unknown }> = {};
+    if (body.name !== undefined && body.name !== existing.name)
+      catChanges.name = { old: existing.name, new: body.name };
+    if (body.position !== undefined && body.position !== existing.position)
+      catChanges.position = { old: existing.position, new: body.position };
+
+    if (Object.keys(catChanges).length > 0) {
+      logAuditAction({
+        actionType: 'category_update',
+        actorId: req.userId!,
+        serverId: req.params.serverId,
+        targetId: req.params.categoryId,
+        targetType: 'category',
+        changes: catChanges,
+      });
+    }
+
     res.json({ data: category });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -299,6 +361,15 @@ router.delete('/:serverId/categories/:categoryId', async (req, res) => {
   });
 
   await prisma.channelCategory.delete({ where: { id: req.params.categoryId } });
+
+  logAuditAction({
+    actionType: 'category_delete',
+    actorId: req.userId!,
+    serverId: req.params.serverId,
+    targetId: req.params.categoryId,
+    targetType: 'category',
+  });
+
   res.json({ data: { success: true } });
 });
 

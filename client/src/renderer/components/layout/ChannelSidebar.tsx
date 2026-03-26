@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, type DragEvent, type MouseEvent, type KeyboardEvent } from 'react';
-import { Hash, Volume2, ChevronDown, ChevronRight, Plus, Settings, UserPlus, FolderPlus, MicOff, HeadphoneOff, Pencil, Trash2, Video, Monitor, UserMinus, ShieldBan, BellOff, Bell } from 'lucide-react';
+import { Hash, Volume2, ChevronDown, ChevronRight, Plus, Settings, UserPlus, FolderPlus, MicOff, HeadphoneOff, Pencil, Trash2, Video, Monitor, UserMinus, ShieldBan, BellOff, Bell, Calendar } from 'lucide-react';
 import { useServerStore } from '../../stores/serverStore';
 import { useVoice } from '../../hooks/useVoice';
 import { useVoiceStore } from '../../stores/voiceStore';
@@ -17,7 +17,10 @@ import InviteModal from '../modals/InviteModal';
 import ServerSettingsModal from '../modals/ServerSettingsModal';
 import NotificationSettingsModal from '../modals/NotificationSettingsModal';
 import { useNotificationStore } from '../../stores/notificationStore';
-import type { Channel, ChannelCategory } from '../../../../../shared/types';
+import { useEventStore } from '../../stores/eventStore';
+import CreateEventModal from '../modals/CreateEventModal';
+import EventDetailModal from '../modals/EventDetailModal';
+import type { Channel, ChannelCategory, ScheduledEvent } from '../../../../../shared/types';
 
 interface DropTarget {
   categoryId: string | null; // null = uncategorized
@@ -42,7 +45,11 @@ export default function ChannelSidebar() {
   const unreads = useUnreadStore((s) => s.unreads);
   const { isAdmin, isOwner, canManageChannels, canKickMembers } = usePermissions();
   const notificationStore = useNotificationStore();
+  const { events, fetchEvents } = useEventStore();
 
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<ScheduledEvent | null>(null);
+  const [eventsExpanded, setEventsExpanded] = useState(true);
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -81,6 +88,12 @@ export default function ChannelSidebar() {
       categoryInputRef.current.select();
     }
   }, [editingCategoryId]);
+
+  useEffect(() => {
+    if (activeServerId) fetchEvents(activeServerId);
+  }, [activeServerId, fetchEvents]);
+
+  const upcomingEvents = events.filter((e) => e.status === 'scheduled' || e.status === 'active');
 
   const toggleCategory = (categoryId: string) => {
     setCollapsedCategories((prev) => {
@@ -613,6 +626,56 @@ export default function ChannelSidebar() {
 
       {/* Channel list */}
       <div className="scrollbar-echo flex-1 overflow-y-auto px-2 pt-4">
+        {/* Events section */}
+        {upcomingEvents.length > 0 && (
+          <div className="mb-2">
+            <button
+              onClick={() => setEventsExpanded(!eventsExpanded)}
+              className="flex w-full items-center gap-1 px-1 text-xs font-semibold uppercase text-ec-text-muted hover:text-ec-text-primary"
+            >
+              {eventsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <span className="flex-1 text-left">Events — {upcomingEvents.length}</span>
+              {isAdmin && activeServerId && (
+                <Plus
+                  size={14}
+                  className="text-ec-text-muted hover:text-ec-text-primary"
+                  onClick={(e) => { e.stopPropagation(); setShowCreateEvent(true); }}
+                />
+              )}
+            </button>
+            {eventsExpanded && (
+              <div className="mt-1 space-y-1">
+                {upcomingEvents.slice(0, 3).map((event) => (
+                  <button
+                    key={event.id}
+                    onClick={() => setSelectedEvent(event)}
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-ec-bg-modifier-hover"
+                  >
+                    <Calendar size={14} className="shrink-0 text-ec-text-muted" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-ec-text-primary">{event.title}</p>
+                      <p className="text-xs text-ec-text-muted">
+                        {new Date(event.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {upcomingEvents.length === 0 && isAdmin && activeServerId && (
+          <div className="mb-2">
+            <button
+              onClick={() => setShowCreateEvent(true)}
+              className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-xs text-ec-text-muted hover:bg-ec-bg-modifier-hover hover:text-ec-text-secondary"
+            >
+              <Calendar size={14} />
+              <span>Create Event</span>
+            </button>
+          </div>
+        )}
+
         {/* Uncategorized channels */}
         {uncategorizedChannels.length > 0 &&
           renderCategorySection(null, uncategorizedChannels)}
@@ -667,6 +730,12 @@ export default function ChannelSidebar() {
       )}
       {notifChannelId && activeServerId && (
         <NotificationSettingsModal mode="channel" serverId={activeServerId} channelId={notifChannelId} onClose={() => setNotifChannelId(null)} />
+      )}
+      {showCreateEvent && activeServerId && (
+        <CreateEventModal serverId={activeServerId} onClose={() => setShowCreateEvent(false)} />
+      )}
+      {selectedEvent && activeServerId && (
+        <EventDetailModal event={selectedEvent} serverId={activeServerId} onClose={() => setSelectedEvent(null)} />
       )}
     </div>
   );

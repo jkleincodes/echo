@@ -1,11 +1,12 @@
 import { useState, type MouseEvent } from 'react';
-import { Plus, MessageCircle, ArrowDownToLine, BellOff, Bell, Settings, UserPlus, CheckCheck, LogOut } from 'lucide-react';
+import { Plus, MessageCircle, ArrowDownToLine, BellOff, Bell, Settings, UserPlus, CheckCheck, LogOut, Compass } from 'lucide-react';
 import { useServerStore } from '../../stores/serverStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useUnreadStore } from '../../stores/unreadStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { api } from '../../lib/api';
 import CreateServerModal from '../modals/CreateServerModal';
+import DiscoverModal from '../modals/DiscoverModal';
 import JoinServerModal from '../modals/JoinServerModal';
 import InviteModal from '../modals/InviteModal';
 import NotificationSettingsModal from '../modals/NotificationSettingsModal';
@@ -26,6 +27,7 @@ export default function ServerSidebar() {
   const notificationStore = useNotificationStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showDiscover, setShowDiscover] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [inviteServerId, setInviteServerId] = useState<string | null>(null);
   const [notifServerId, setNotifServerId] = useState<string | null>(null);
@@ -240,10 +242,20 @@ export default function ServerSidebar() {
         >
           <ArrowDownToLine size={24} />
         </button>
+
+        {/* Discover button */}
+        <button
+          onClick={() => setShowDiscover(true)}
+          className="flex h-12 w-12 items-center justify-center rounded-xl bg-ec-bg-primary text-green transition-all hover:rounded-lg hover:bg-green hover:text-white"
+          title="Discover Servers"
+        >
+          <Compass size={24} />
+        </button>
       </div>
 
       {showCreateModal && <CreateServerModal onClose={() => setShowCreateModal(false)} />}
       {showJoinModal && <JoinServerModal onClose={() => setShowJoinModal(false)} />}
+      {showDiscover && <DiscoverModal onClose={() => setShowDiscover(false)} />}
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}

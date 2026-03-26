@@ -4,10 +4,10 @@ import { X, Shield, ShieldBan, Trash2, Loader2, Plus, Copy, Check, Webhook } fro
 import { api } from '../../lib/api';
 import { useServerStore } from '../../stores/serverStore';
 import Avatar from '../ui/Avatar';
-import type { Role, Member, ServerBan, Webhook as WebhookType } from '../../../../../shared/types';
+import type { Role, Member, ServerBan, Webhook as WebhookType, AuditLogEntry, AuditActionType } from '../../../../../shared/types';
 import { getServerUrl } from '../../lib/serverUrl';
 
-type Tab = 'overview' | 'roles' | 'members' | 'bans' | 'webhooks';
+type Tab = 'overview' | 'roles' | 'members' | 'bans' | 'webhooks' | 'audit-log';
 
 const PERMISSION_OPTIONS = [
   { key: 'MANAGE_CHANNELS', label: 'Manage Channels' },
@@ -32,6 +32,7 @@ export default function ServerSettingsModal({ serverId, onClose }: Props) {
     { key: 'members', label: 'Members' },
     { key: 'bans', label: 'Bans' },
     { key: 'webhooks', label: 'Webhooks' },
+    { key: 'audit-log' as Tab, label: 'Audit Log' },
   ];
 
   return createPortal(
@@ -77,6 +78,7 @@ export default function ServerSettingsModal({ serverId, onClose }: Props) {
             {activeTab === 'members' && <MembersTab serverId={serverId} />}
             {activeTab === 'bans' && <BansTab serverId={serverId} />}
             {activeTab === 'webhooks' && <WebhooksTab serverId={serverId} />}
+            {activeTab === 'audit-log' && <AuditLogTab serverId={serverId} />}
           </div>
         </div>
       </div>
@@ -108,6 +110,7 @@ function OverviewTab({ serverId }: { serverId: string }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isPublic, setIsPublic] = useState(server?.isPublic ?? false);
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
 
@@ -142,6 +145,7 @@ function OverviewTab({ serverId }: { serverId: string }) {
         description: description.trim() || null,
         afkChannelId,
         afkTimeout,
+        isPublic,
       });
       updateServer(res.data.data);
       setSuccess(true);
@@ -227,6 +231,20 @@ function OverviewTab({ serverId }: { serverId: string }) {
           </option>
         ))}
       </select>
+
+      <label className="mb-2 block text-xs font-bold uppercase text-ec-text-secondary">
+        Server Discovery
+      </label>
+      <label className="flex items-center gap-3 mb-4 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={isPublic}
+          onChange={(e) => setIsPublic(e.target.checked)}
+          className="h-4 w-4 rounded"
+        />
+        <span className="text-sm text-ec-text-primary">Public Server</span>
+      </label>
+      <p className="mb-4 -mt-2 text-xs text-ec-text-muted">Allow anyone to discover and join this server without an invite.</p>
 
       {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
       {success && <p className="mb-3 text-sm text-green-400">Changes saved!</p>}
@@ -961,6 +979,199 @@ function WebhooksTab({ serverId }: { serverId: string }) {
           <p className="py-4 text-center text-sm text-ec-text-muted">No webhooks yet</p>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Audit Log Tab ── */
+
+function formatAction(entry: AuditLogEntry): string {
+  switch (entry.actionType) {
+    case 'server_update': return 'updated server settings';
+    case 'icon_update': return 'updated the server icon';
+    case 'channel_create': return 'created a channel';
+    case 'channel_update': return 'updated a channel';
+    case 'channel_delete': return 'deleted a channel';
+    case 'category_create': return 'created a category';
+    case 'category_update': return 'updated a category';
+    case 'category_delete': return 'deleted a category';
+    case 'role_create': return 'created a role';
+    case 'role_update': return 'updated a role';
+    case 'role_delete': return 'deleted a role';
+    case 'member_kick': return 'kicked a member';
+    case 'member_ban': return 'banned a member';
+    case 'member_unban': return 'unbanned a member';
+    case 'member_role_add': return 'added a role to a member';
+    case 'member_role_remove': return 'removed a role from a member';
+    default: return entry.actionType;
+  }
+}
+
+function timeAgo(date: string): string {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+const ACTION_TYPE_GROUPS: { label: string; types: AuditActionType[] }[] = [
+  { label: 'Server Updates', types: ['server_update', 'icon_update'] },
+  { label: 'Channel Changes', types: ['channel_create', 'channel_update', 'channel_delete', 'category_create', 'category_update', 'category_delete'] },
+  { label: 'Role Changes', types: ['role_create', 'role_update', 'role_delete'] },
+  { label: 'Member Actions', types: ['member_kick', 'member_ban', 'member_unban', 'member_role_add', 'member_role_remove'] },
+];
+
+function AuditLogTab({ serverId }: { serverId: string }) {
+  const [entries, setEntries] = useState<AuditLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const fetchEntries = async (cursor?: string | null) => {
+    const isLoadMore = !!cursor;
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+    try {
+      let url = `/api/servers/${serverId}/audit-log?limit=50`;
+      if (filter) {
+        const group = ACTION_TYPE_GROUPS.find((g) => g.label === filter);
+        if (group) {
+          url += `&actionType=${group.types.join(',')}`;
+        }
+      }
+      if (cursor) {
+        url += `&cursor=${cursor}`;
+      }
+      const res = await api.get(url);
+      const data = res.data.data;
+      const newEntries: AuditLogEntry[] = Array.isArray(data) ? data : data.entries || [];
+      const newCursor = res.data.nextCursor || (Array.isArray(data) ? null : data.nextCursor) || null;
+      const more = res.data.hasMore ?? (Array.isArray(data) ? false : data.hasMore) ?? false;
+
+      if (isLoadMore) {
+        setEntries((prev) => [...prev, ...newEntries]);
+      } else {
+        setEntries(newEntries);
+      }
+      setNextCursor(newCursor);
+      setHasMore(more);
+    } catch {
+      // failed to fetch
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    setEntries([]);
+    setNextCursor(null);
+    fetchEntries();
+  }, [serverId, filter]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 size={24} className="animate-spin text-ec-text-muted" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-4">
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="w-full rounded bg-ec-input-bg p-2.5 text-ec-text-primary outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value="">All Actions</option>
+          {ACTION_TYPE_GROUPS.map((group) => (
+            <option key={group.label} value={group.label}>
+              {group.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1">
+        {entries.map((entry) => {
+          let changes: Record<string, { old?: string; new?: string }> | null = null;
+          try {
+            if (entry.changes) changes = JSON.parse(entry.changes);
+          } catch {
+            // invalid JSON
+          }
+
+          return (
+            <div key={entry.id} className="rounded-md bg-ec-bg-secondary p-3">
+              <div className="flex items-center gap-3">
+                <Avatar
+                  username={entry.actor?.username || 'unknown'}
+                  avatarUrl={entry.actor?.avatarUrl}
+                  size={36}
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-ec-text-primary">
+                      {entry.actor?.displayName || 'Unknown User'}
+                    </span>
+                    <span className="text-sm text-ec-text-secondary">
+                      {formatAction(entry)}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-ec-text-muted">{timeAgo(entry.createdAt)}</p>
+                  {changes && (
+                    <div className="mt-1 space-y-0.5">
+                      {Object.entries(changes).map(([key, val]) => (
+                        <p key={key} className="text-xs text-ec-text-muted">
+                          Changed <span className="font-medium text-ec-text-secondary">{key}</span>
+                          {val.old !== undefined && <> from <span className="font-medium text-ec-text-secondary">{String(val.old)}</span></>}
+                          {val.new !== undefined && <> to <span className="font-medium text-ec-text-secondary">{String(val.new)}</span></>}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {entry.reason && (
+                    <p className="mt-0.5 text-xs text-ec-text-muted">Reason: {entry.reason}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {entries.length === 0 && (
+          <p className="py-4 text-center text-sm text-ec-text-muted">No audit log entries</p>
+        )}
+      </div>
+
+      {hasMore && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={() => fetchEntries(nextCursor)}
+            disabled={loadingMore}
+            className="rounded bg-ec-bg-tertiary px-4 py-2 text-sm font-medium text-ec-text-secondary hover:bg-ec-bg-modifier-hover disabled:opacity-50"
+          >
+            {loadingMore ? (
+              <span className="flex items-center gap-2">
+                <Loader2 size={14} className="animate-spin" />
+                Loading...
+              </span>
+            ) : (
+              'Load More'
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

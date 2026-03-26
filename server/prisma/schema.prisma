@@ -79,6 +79,7 @@ model Server {
   ownerId      String
   afkChannelId String?
   afkTimeout   Int       @default(300)
+  isPublic     Boolean   @default(false)
   createdAt    DateTime  @default(now())
 
   owner      User       @relation("ServerOwner", fields: [ownerId], references: [id])
@@ -92,6 +93,8 @@ model Server {
   soundboardSounds SoundboardSound[]
   notificationPreferences NotificationPreference[]
   webhooks   Webhook[]
+  auditLogs  AuditLog[]
+  scheduledEvents ScheduledEvent[]
 }
 
 model Member {
@@ -125,6 +128,7 @@ model Channel {
   threads    Thread[]
   notificationOverrides ChannelNotificationOverride[]
   webhooks   Webhook[]
+  scheduledEvents ScheduledEvent[]
 }
 
 model ChannelCategory {
@@ -460,4 +464,54 @@ model Webhook {
 
   @@index([channelId])
   @@index([serverId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actionType String
+  actorId    String
+  targetId   String?
+  targetType String?
+  changes    String?
+  reason     String?
+  serverId   String
+  createdAt  DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, createdAt])
+  @@index([serverId, actionType])
+  @@index([actorId])
+}
+
+model ScheduledEvent {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startAt     DateTime
+  endAt       DateTime?
+  location    String?
+  channelId   String?
+  creatorId   String
+  serverId    String
+  status      String    @default("scheduled")
+  createdAt   DateTime  @default(now())
+
+  server  Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  rsvps   EventRSVP[]
+
+  @@index([serverId, startAt])
+  @@index([serverId, status])
+}
+
+model EventRSVP {
+  id      String @id @default(cuid())
+  userId  String
+  eventId String
+  status  String @default("interested")
+
+  event ScheduledEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
 }

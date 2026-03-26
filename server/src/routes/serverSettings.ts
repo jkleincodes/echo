@@ -8,6 +8,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { UPLOAD_DIR } from '../lib/upload.js';
 import { createSystemMessage } from '../lib/systemMessages.js';
 import { updateServerAfkCache } from '../socket/voiceHandler.js';
+import { logAuditAction } from '../lib/auditLog.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -17,6 +18,7 @@ const updateServerSchema = z.object({
   description: z.string().max(500).optional().nullable(),
   afkChannelId: z.string().nullable().optional(),
   afkTimeout: z.number().int().min(60).max(86400).optional(),
+  isPublic: z.boolean().optional(),
 });
 
 const createRoleSchema = z.object({
@@ -44,6 +46,10 @@ router.patch('/:serverId', async (req, res) => {
       return;
     }
 
+    const existingServer = await prisma.server.findUnique({
+      where: { id: req.params.serverId },
+    });
+
     const server = await prisma.server.update({
       where: { id: req.params.serverId },
       data: {
@@ -51,8 +57,33 @@ router.patch('/:serverId', async (req, res) => {
         ...(body.description !== undefined && { description: body.description }),
         ...(body.afkChannelId !== undefined && { afkChannelId: body.afkChannelId }),
         ...(body.afkTimeout !== undefined && { afkTimeout: body.afkTimeout }),
+        ...(body.isPublic !== undefined && { isPublic: body.isPublic }),
       },
     });
+
+    // Compute changes diff for audit log
+    if (existingServer) {
+      const changes: Record<string, { old: unknown; new: unknown }> = {};
+      if (body.name !== undefined && body.name !== existingServer.name)
+        changes.name = { old: existingServer.name, new: body.name };
+      if (body.description !== undefined && body.description !== existingServer.description)
+        changes.description = { old: existingServer.description, new: body.description };
+      if (body.afkChannelId !== undefined && body.afkChannelId !== existingServer.afkChannelId)
+        changes.afkChannelId = { old: existingServer.afkChannelId, new: body.afkChannelId };
+      if (body.afkTimeout !== undefined && body.afkTimeout !== existingServer.afkTimeout)
+        changes.afkTimeout = { old: existingServer.afkTimeout, new: body.afkTimeout };
+
+      if (Object.keys(changes).length > 0) {
+        logAuditAction({
+          actionType: 'server_update',
+          actorId: req.userId!,
+          serverId: req.params.serverId,
+          targetId: req.params.serverId,
+          targetType: 'server',
+          changes,
+        });
+      }
+    }
 
     // Update AFK settings cache
     updateServerAfkCache(server.id, server.afkChannelId, server.afkTimeout);
@@ -67,6 +98,7 @@ router.patch('/:serverId', async (req, res) => {
       ownerId: server.ownerId,
       afkChannelId: server.afkChannelId,
       afkTimeout: server.afkTimeout,
+      isPublic: server.isPublic,
     });
 
     res.json({ data: server });
@@ -129,6 +161,15 @@ router.patch('/:serverId/icon', (req, res) => {
       data: { iconUrl },
     });
 
+    logAuditAction({
+      actionType: 'icon_update',
+      actorId: req.userId!,
+      serverId: req.params.serverId,
+      targetId: req.params.serverId,
+      targetType: 'server',
+      changes: { iconUrl: { old: null, new: iconUrl } },
+    });
+
     const { io } = await import('../index.js');
     io.emit('server:updated', {
       id: server.id,
@@ -169,6 +210,14 @@ router.post('/:serverId/roles', async (req, res) => {
         position: (maxPos._max.position ?? -1) + 1,
         serverId: req.params.serverId,
       },
+    });
+
+    logAuditAction({
+      actionType: 'role_create',
+      actorId: req.userId!,
+      serverId: req.params.serverId,
+      targetId: role.id,
+      targetType: 'role',
     });
 
     res.status(201).json({ data: role });
@@ -220,6 +269,27 @@ router.patch('/:serverId/roles/:roleId', async (req, res) => {
       },
     });
 
+    const roleChanges: Record<string, { old: unknown; new: unknown }> = {};
+    if (body.name !== undefined && body.name !== existingRole.name)
+      roleChanges.name = { old: existingRole.name, new: body.name };
+    if (body.color !== undefined && body.color !== existingRole.color)
+      roleChanges.color = { old: existingRole.color, new: body.color };
+    if (body.permissions !== undefined && body.permissions !== existingRole.permissions)
+      roleChanges.permissions = { old: existingRole.permissions, new: body.permissions };
+    if (body.position !== undefined && body.position !== existingRole.position)
+      roleChanges.position = { old: existingRole.position, new: body.position };
+
+    if (Object.keys(roleChanges).length > 0) {
+      logAuditAction({
+        actionType: 'role_update',
+        actorId: req.userId!,
+        serverId: req.params.serverId,
+        targetId: req.params.roleId,
+        targetType: 'role',
+        changes: roleChanges,
+      });
+    }
+
     res.json({ data: role });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -249,6 +319,15 @@ router.delete('/:serverId/roles/:roleId', async (req, res) => {
   }
 
   await prisma.role.delete({ where: { id: req.params.roleId } });
+
+  logAuditAction({
+    actionType: 'role_delete',
+    actorId: req.userId!,
+    serverId: req.params.serverId,
+    targetId: req.params.roleId,
+    targetType: 'role',
+  });
+
   res.json({ data: { success: true } });
 });
 
@@ -265,6 +344,16 @@ router.post('/:serverId/members/:memberId/roles/:roleId', async (req, res) => {
   const memberRole = await prisma.memberRole.create({
     data: { memberId: req.params.memberId, roleId: req.params.roleId },
   });
+
+  logAuditAction({
+    actionType: 'member_role_add',
+    actorId: req.userId!,
+    serverId: req.params.serverId,
+    targetId: req.params.memberId,
+    targetType: 'user',
+    changes: { roleId: { old: null, new: req.params.roleId } },
+  });
+
   res.status(201).json({ data: memberRole });
 });
 
@@ -281,6 +370,16 @@ router.delete('/:serverId/members/:memberId/roles/:roleId', async (req, res) => 
   await prisma.memberRole.deleteMany({
     where: { memberId: req.params.memberId, roleId: req.params.roleId },
   });
+
+  logAuditAction({
+    actionType: 'member_role_remove',
+    actorId: req.userId!,
+    serverId: req.params.serverId,
+    targetId: req.params.memberId,
+    targetType: 'user',
+    changes: { roleId: { old: req.params.roleId, new: null } },
+  });
+
   res.json({ data: { success: true } });
 });
 
@@ -327,6 +426,14 @@ router.delete('/:serverId/members/:memberId', async (req, res) => {
   });
 
   await prisma.member.delete({ where: { id: target.id } });
+
+  logAuditAction({
+    actionType: 'member_kick',
+    actorId: req.userId!,
+    serverId: req.params.serverId,
+    targetId: target.userId,
+    targetType: 'user',
+  });
 
   const { io } = await import('../index.js');
   io.emit('member:left', { userId: target.userId, serverId: req.params.serverId });
@@ -410,6 +517,15 @@ router.post('/:serverId/bans/:userId', async (req, res) => {
     });
   }
 
+  logAuditAction({
+    actionType: 'member_ban',
+    actorId: req.userId!,
+    serverId: req.params.serverId,
+    targetId: req.params.userId,
+    targetType: 'user',
+    reason: reason ?? undefined,
+  });
+
   const { io } = await import('../index.js');
   io.emit('member:left', { userId: req.params.userId, serverId: req.params.serverId });
   io.emit('member:banned', { userId: req.params.userId, serverId: req.params.serverId });
@@ -446,6 +562,15 @@ router.delete('/:serverId/bans/:userId', async (req, res) => {
     await prisma.serverBan.delete({
       where: { userId_serverId: { userId: req.params.userId, serverId: req.params.serverId } },
     });
+
+    logAuditAction({
+      actionType: 'member_unban',
+      actorId: req.userId!,
+      serverId: req.params.serverId,
+      targetId: req.params.userId,
+      targetType: 'user',
+    });
+
     res.json({ data: { success: true } });
   } catch {
     res.status(404).json({ error: 'Ban not found' });
@@ -485,6 +610,62 @@ router.get('/:serverId/bans', async (req, res) => {
       createdAt: b.createdAt.toISOString(),
       user: userMap.get(b.userId) || null,
     })),
+  });
+});
+
+// ── Audit Log ──
+
+router.get('/:serverId/audit-log', async (req, res) => {
+  const member = await prisma.member.findUnique({
+    where: { userId_serverId: { userId: req.userId!, serverId: req.params.serverId } },
+  });
+  if (!member || !['owner', 'admin'].includes(member.role)) {
+    res.status(403).json({ error: 'Insufficient permissions' });
+    return;
+  }
+
+  const actionType = req.query.actionType as string | undefined;
+  const actorId = req.query.actorId as string | undefined;
+  const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100);
+  const cursor = req.query.cursor as string | undefined;
+
+  const where: Record<string, unknown> = { serverId: req.params.serverId };
+  if (actionType) where.actionType = actionType;
+  if (actorId) where.actorId = actorId;
+
+  const entries = await prisma.auditLog.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+  });
+
+  const hasMore = entries.length > limit;
+  if (hasMore) entries.pop();
+
+  // Batch fetch actor user info
+  const actorIds = [...new Set(entries.map((e) => e.actorId))];
+  const actors = await prisma.user.findMany({
+    where: { id: { in: actorIds } },
+    select: { id: true, username: true, displayName: true, avatarUrl: true },
+  });
+  const actorMap = new Map(actors.map((u) => [u.id, u]));
+
+  const data = entries.map((e) => ({
+    id: e.id,
+    actionType: e.actionType,
+    actorId: e.actorId,
+    actor: actorMap.get(e.actorId) || null,
+    targetId: e.targetId,
+    targetType: e.targetType,
+    changes: e.changes ? JSON.parse(e.changes) : null,
+    reason: e.reason,
+    createdAt: e.createdAt.toISOString(),
+  }));
+
+  res.json({
+    data,
+    nextCursor: hasMore ? entries[entries.length - 1].id : null,
   });
 });
 

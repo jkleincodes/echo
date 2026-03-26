@@ -12,10 +12,11 @@ import { useDMStore } from '../stores/dmStore';
 import { useUnreadStore } from '../stores/unreadStore';
 import { useThreadStore } from '../stores/threadStore';
 import { useNotificationStore } from '../stores/notificationStore';
+import { useEventStore } from '../stores/eventStore';
 import { api } from '../lib/api';
 import { playbackSoundboardSound } from '../lib/soundboardPlayback';
 import { playSoundEffect } from '../lib/soundEffects';
-import type { Message, Channel, Member, Reaction, Embed, Server, Friendship, DMChannel, DMMessage, UserVoiceState, UserMediaState, User, Thread, NotificationPayload } from '../../../../shared/types';
+import type { Message, Channel, Member, Reaction, Embed, Server, Friendship, DMChannel, DMMessage, UserVoiceState, UserMediaState, User, Thread, NotificationPayload, ScheduledEvent } from '../../../../shared/types';
 
 export function useSocket() {
   const addMessage = useMessageStore((s) => s.addMessage);
@@ -65,6 +66,9 @@ export function useSocket() {
   const updateThreadReactions = useThreadStore((s) => s.updateThreadReactions);
   const updateThreadEmbeds = useThreadStore((s) => s.updateThreadEmbeds);
   const updateThread = useThreadStore((s) => s.updateThread);
+  const addEvent = useEventStore((s) => s.addEvent);
+  const updateEventInStore = useEventStore((s) => s.updateEventInStore);
+  const removeEvent = useEventStore((s) => s.removeEvent);
 
   useEffect(() => {
     const socket = socketService.getSocket();
@@ -340,6 +344,10 @@ export function useSocket() {
         addTyping(`thread:${data.threadId}`, data.userId, data.username),
       'thread:typing:stop': (data: { threadId: string; userId: string }) =>
         removeTyping(`thread:${data.threadId}`, data.userId),
+      // Scheduled events
+      'event:created': (event: ScheduledEvent) => addEvent(event),
+      'event:updated': (event: ScheduledEvent) => updateEventInStore(event),
+      'event:deleted': (data: { eventId: string }) => removeEvent(data.eventId),
       // Desktop notifications
       'notification:push': (data: NotificationPayload) => {
         // Skip if desktop notifications are disabled
@@ -387,5 +395,5 @@ export function useSocket() {
       }
       clearInterval(heartbeatInterval);
     };
-  }, [addMessage, removeMessage, updateMessage, updateReactions, updateEmbeds, pinMessage, unpinMessage, setUserStatuses, setUserStatus, updateMemberUser, updateServer, addChannel, updateChannel, removeChannel, setChannels, addMember, removeMember, addParticipant, removeParticipant, setChannelParticipants, addChannelParticipant, removeChannelParticipant, setUserVoiceState, setAllVoiceStates, removeUserVoiceState, setUserMediaState, setAllMediaStates, removeUserMediaState, addTyping, removeTyping, addFriendship, updateFriendship, removeFriendship, addDMMessage, updateDMMessage, removeDMMessage, addDMChannel, setUnread, setBulkUnread, clearUnread, clearThreadUnread, addThreadMessage, removeThreadMessage, updateThreadMessage, updateThreadReactions, updateThreadEmbeds, updateThread]);
+  }, [addMessage, removeMessage, updateMessage, updateReactions, updateEmbeds, pinMessage, unpinMessage, setUserStatuses, setUserStatus, updateMemberUser, updateServer, addChannel, updateChannel, removeChannel, setChannels, addMember, removeMember, addParticipant, removeParticipant, setChannelParticipants, addChannelParticipant, removeChannelParticipant, setUserVoiceState, setAllVoiceStates, removeUserVoiceState, setUserMediaState, setAllMediaStates, removeUserMediaState, addTyping, removeTyping, addFriendship, updateFriendship, removeFriendship, addDMMessage, updateDMMessage, removeDMMessage, addDMChannel, setUnread, setBulkUnread, clearUnread, clearThreadUnread, addThreadMessage, removeThreadMessage, updateThreadMessage, updateThreadReactions, updateThreadEmbeds, updateThread, addEvent, updateEventInStore, removeEvent]);
 }
