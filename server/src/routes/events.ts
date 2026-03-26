@@ -8,21 +8,21 @@ const router = Router();
 router.use(authMiddleware);
 
 const createEventSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).optional(),
-  startAt: z.string().datetime(),
-  endAt: z.string().datetime().optional(),
-  location: z.string().max(200).optional(),
-  channelId: z.string().optional(),
+  title: z.string().min(1, 'Title is required').max(200, 'Title is too long'),
+  description: z.string().max(2000, 'Description is too long').optional().nullable(),
+  startAt: z.string().datetime({ message: 'Invalid start date' }),
+  endAt: z.string().datetime({ message: 'Invalid end date' }).optional().nullable(),
+  location: z.string().max(200, 'Location is too long').optional().nullable(),
+  channelId: z.string().optional().nullable(),
 });
 
 const updateEventSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).optional(),
-  startAt: z.string().datetime().optional(),
-  endAt: z.string().datetime().optional(),
-  location: z.string().max(200).optional(),
-  channelId: z.string().optional(),
+  title: z.string().min(1, 'Title is required').max(200, 'Title is too long').optional(),
+  description: z.string().max(2000, 'Description is too long').optional().nullable(),
+  startAt: z.string().datetime({ message: 'Invalid start date' }).optional().nullable(),
+  endAt: z.string().datetime({ message: 'Invalid end date' }).optional().nullable(),
+  location: z.string().max(200, 'Location is too long').optional().nullable(),
+  channelId: z.string().optional().nullable(),
   status: z.enum(['scheduled', 'active', 'completed', 'cancelled']).optional(),
 });
 
@@ -165,11 +165,11 @@ router.post('/:serverId/events', async (req, res) => {
     const event = await prisma.scheduledEvent.create({
       data: {
         title: body.title,
-        description: body.description,
+        description: body.description ?? null,
         startAt: new Date(body.startAt),
-        endAt: body.endAt ? new Date(body.endAt) : undefined,
-        location: body.location,
-        channelId: body.channelId,
+        endAt: body.endAt ? new Date(body.endAt) : null,
+        location: body.location ?? null,
+        channelId: body.channelId ?? null,
         creatorId: req.userId!,
         serverId: req.params.serverId,
       },
