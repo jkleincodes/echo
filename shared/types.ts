@@ -8,6 +8,7 @@ export interface User {
   status: UserStatus;
   bio?: string | null;
   customStatus?: string | null;
+  customStatusEmoji?: string | null;
   bannerColor?: string | null;
   bannerUrl?: string | null;
   pronouns?: string | null;
@@ -16,7 +17,7 @@ export interface User {
   twoFactorEnabled?: boolean;
 }
 
-export type UserStatus = 'online' | 'offline';
+export type UserStatus = 'online' | 'idle' | 'dnd' | 'invisible' | 'offline';
 
 export interface Server {
   id: string;

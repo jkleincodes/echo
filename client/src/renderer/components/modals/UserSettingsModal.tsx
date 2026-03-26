@@ -93,6 +93,7 @@ function ProfilePreviewCard({
   bannerUrl,
   bio,
   customStatus,
+  customStatusEmoji,
   pronouns,
 }: {
   username: string;
@@ -102,6 +103,7 @@ function ProfilePreviewCard({
   bannerUrl: string | null;
   bio: string;
   customStatus: string;
+  customStatusEmoji?: string;
   pronouns: string;
 }) {
   return (
@@ -133,8 +135,11 @@ function ProfilePreviewCard({
           {pronouns && (
             <p className="text-[11px] text-ec-text-muted">{pronouns}</p>
           )}
-          {customStatus && (
-            <p className="mt-1.5 text-xs text-ec-text-primary">{customStatus}</p>
+          {(customStatus || customStatusEmoji) && (
+            <p className="mt-1.5 text-xs text-ec-text-primary">
+              {customStatusEmoji && <span className="mr-0.5">{customStatusEmoji}</span>}
+              {customStatus}
+            </p>
           )}
           {bio && (
             <>
@@ -155,6 +160,7 @@ function AccountTab() {
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [customStatus, setCustomStatus] = useState(user?.customStatus || '');
+  const [customStatusEmoji, setCustomStatusEmoji] = useState(user?.customStatusEmoji || '');
   const [bannerColor, setBannerColor] = useState(user?.bannerColor || '#0ea5e9');
   const [pronouns, setPronouns] = useState(user?.pronouns || '');
   const [saving, setSaving] = useState(false);
@@ -217,6 +223,7 @@ function AccountTab() {
         displayName: displayName.trim(),
         bio: bio.trim() || null,
         customStatus: customStatus.trim() || null,
+        customStatusEmoji: customStatusEmoji.trim() || null,
         bannerColor,
         pronouns: pronouns.trim() || null,
       });
@@ -363,13 +370,23 @@ function AccountTab() {
         <label className="mb-2 block text-xs font-bold uppercase text-ec-text-secondary">
           Custom Status
         </label>
-        <input
-          type="text"
-          value={customStatus}
-          onChange={(e) => setCustomStatus(e.target.value)}
-          placeholder="What are you up to?"
-          className="mb-4 w-full rounded bg-ec-input-bg p-2.5 text-ec-text-primary outline-none focus:ring-2 focus:ring-accent"
-        />
+        <div className="mb-4 flex items-center gap-2">
+          <input
+            type="text"
+            value={customStatusEmoji}
+            onChange={(e) => setCustomStatusEmoji(e.target.value)}
+            placeholder="😀"
+            maxLength={4}
+            className="w-12 rounded bg-ec-input-bg p-2.5 text-center text-ec-text-primary outline-none focus:ring-2 focus:ring-accent"
+          />
+          <input
+            type="text"
+            value={customStatus}
+            onChange={(e) => setCustomStatus(e.target.value)}
+            placeholder="What are you up to?"
+            className="flex-1 rounded bg-ec-input-bg p-2.5 text-ec-text-primary outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
 
         <label className="mb-2 block text-xs font-bold uppercase text-ec-text-secondary">
           Bio
@@ -418,6 +435,7 @@ function AccountTab() {
           bannerUrl={bannerPreview}
           bio={bio}
           customStatus={customStatus}
+          customStatusEmoji={customStatusEmoji}
           pronouns={pronouns}
         />
       </div>

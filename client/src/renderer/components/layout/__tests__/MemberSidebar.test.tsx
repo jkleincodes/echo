@@ -19,7 +19,7 @@ describe('MemberSidebar', () => {
     const user1 = createMockUser({ id: 'u1', displayName: 'Alice' });
     const member1 = createMockMember({ userId: 'u1', user: user1 });
     useServerStore.setState({ members: [member1] });
-    usePresenceStore.setState({ onlineUsers: new Set(['u1']) });
+    usePresenceStore.setState({ userStatuses: new Map([['u1', 'online']]) });
     renderWithRouter(<MemberSidebar />);
     expect(screen.getByText(/online/i)).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe('MemberSidebar', () => {
     const user1 = createMockUser({ id: 'u1', displayName: 'Bob' });
     const member1 = createMockMember({ userId: 'u1', user: user1 });
     useServerStore.setState({ members: [member1] });
-    usePresenceStore.setState({ onlineUsers: new Set() });
+    usePresenceStore.setState({ userStatuses: new Map() });
     renderWithRouter(<MemberSidebar />);
     expect(screen.getByText(/offline/i)).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
@@ -40,7 +40,7 @@ describe('MemberSidebar', () => {
     const user1 = createMockUser({ id: 'u1', displayName: 'Charlie' });
     const member1 = createMockMember({ userId: 'u1', user: user1 });
     useServerStore.setState({ members: [member1] });
-    usePresenceStore.setState({ onlineUsers: new Set(['u1']) });
+    usePresenceStore.setState({ userStatuses: new Map([['u1', 'online']]) });
 
     mockApi.get.mockResolvedValueOnce({
       data: { data: { ...user1, createdAt: '2024-01-01T00:00:00Z' } },
@@ -57,7 +57,7 @@ describe('MemberSidebar', () => {
     const m1 = createMockMember({ userId: 'u1', user: user1 });
     const m2 = createMockMember({ userId: 'u2', user: user2 });
     useServerStore.setState({ members: [m1, m2] });
-    usePresenceStore.setState({ onlineUsers: new Set(['u1']) });
+    usePresenceStore.setState({ userStatuses: new Map([['u1', 'online']]) });
     renderWithRouter(<MemberSidebar />);
     expect(screen.getByText(/online — 1/i)).toBeInTheDocument();
     expect(screen.getByText(/offline — 1/i)).toBeInTheDocument();

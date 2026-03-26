@@ -21,7 +21,7 @@ describe('Avatar', () => {
   });
 
   it('shows status indicator when showStatus=true', () => {
-    const { container } = render(<Avatar username="alice" showStatus online />);
+    const { container } = render(<Avatar username="alice" showStatus status="online" />);
     const statusDot = container.querySelector('.absolute.-bottom-0\\.5.-right-0\\.5');
     expect(statusDot).not.toBeNull();
   });

@@ -17,8 +17,9 @@ model User {
   avatarUrl     String?
   status        String    @default("offline")
   bio           String?
-  customStatus  String?
-  bannerColor   String?
+  customStatus      String?
+  customStatusEmoji String?
+  bannerColor       String?
   bannerUrl     String?
   pronouns      String?
   totpSecret    String?

@@ -1,3 +1,4 @@
+import type { UserStatus } from '../../../../../shared/types';
 import { getServerUrl } from '../../lib/serverUrl';
 
 function resolveUrl(url: string) {
@@ -23,11 +24,71 @@ interface AvatarProps {
   avatarUrl?: string | null;
   size?: number;
   showStatus?: boolean;
-  online?: boolean;
+  status?: UserStatus;
   speaking?: boolean;
 }
 
-export default function Avatar({ username, avatarUrl, size = 40, showStatus, online, speaking }: AvatarProps) {
+function StatusIndicator({ status, size }: { status: UserStatus; size: number }) {
+  const indicatorSize = size * 0.35;
+  const borderWidth = 3;
+
+  if (status === 'online') {
+    return (
+      <div
+        className="absolute -bottom-0.5 -right-0.5 rounded-full border-[3px] border-ec-bg-secondary bg-ec-status-online"
+        style={{ width: indicatorSize, height: indicatorSize }}
+      />
+    );
+  }
+
+  if (status === 'idle') {
+    return (
+      <div
+        className="absolute -bottom-0.5 -right-0.5"
+        style={{ width: indicatorSize, height: indicatorSize }}
+      >
+        <svg viewBox="0 0 16 16" width={indicatorSize} height={indicatorSize}>
+          <circle cx="8" cy="8" r="8" fill="var(--color-ec-bg-secondary)" />
+          <path
+            d="M14 8A6 6 0 1 1 8 2a4.5 4.5 0 0 0 6 6Z"
+            fill="var(--color-ec-status-idle)"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  if (status === 'dnd') {
+    return (
+      <div
+        className="absolute -bottom-0.5 -right-0.5"
+        style={{ width: indicatorSize, height: indicatorSize }}
+      >
+        <svg viewBox="0 0 16 16" width={indicatorSize} height={indicatorSize}>
+          <circle cx="8" cy="8" r="8" fill="var(--color-ec-bg-secondary)" />
+          <circle cx="8" cy="8" r="6" fill="var(--color-ec-status-dnd)" />
+          <rect x="4" y="6.5" width="8" height="3" rx="1.5" fill="var(--color-ec-bg-secondary)" />
+        </svg>
+      </div>
+    );
+  }
+
+  // offline / invisible
+  return (
+    <div
+      className="absolute -bottom-0.5 -right-0.5"
+      style={{ width: indicatorSize, height: indicatorSize }}
+    >
+      <svg viewBox="0 0 16 16" width={indicatorSize} height={indicatorSize}>
+        <circle cx="8" cy="8" r="8" fill="var(--color-ec-bg-secondary)" />
+        <circle cx="8" cy="8" r="6" fill="var(--color-ec-status-offline)" />
+        <circle cx="8" cy="8" r="3" fill="var(--color-ec-bg-secondary)" />
+      </svg>
+    </div>
+  );
+}
+
+export default function Avatar({ username, avatarUrl, size = 40, showStatus, status = 'offline', speaking }: AvatarProps) {
   const initial = username.charAt(0).toUpperCase();
   const color = getColor(username);
 
@@ -52,14 +113,7 @@ export default function Avatar({ username, avatarUrl, size = 40, showStatus, onl
           {initial}
         </div>
       )}
-      {showStatus && (
-        <div
-          className={`absolute -bottom-0.5 -right-0.5 rounded-full border-[3px] border-ec-bg-secondary ${
-            online ? 'bg-ec-status-online' : 'bg-ec-status-offline'
-          }`}
-          style={{ width: size * 0.35, height: size * 0.35 }}
-        />
-      )}
+      {showStatus && <StatusIndicator status={status} size={size} />}
     </div>
   );
 }

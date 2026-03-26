@@ -13,7 +13,8 @@ export default function DMChatArea() {
   const activeDMChannelId = useDMStore((s) => s.activeDMChannelId);
   const channels = useDMStore((s) => s.channels);
   const currentUserId = useAuthStore((s) => s.user?.id);
-  const onlineUsers = usePresenceStore((s) => s.onlineUsers);
+  const getStatus = usePresenceStore((s) => s.getStatus);
+  const userStatuses = usePresenceStore((s) => s.userStatuses); // subscribe to changes
   const clearUnread = useUnreadStore((s) => s.clearUnread);
 
   // Auto-ack when switching DM channels
@@ -52,7 +53,7 @@ export default function DMChatArea() {
     );
   }
 
-  const isOnline = onlineUsers.has(otherParticipant.id);
+  const otherStatus = getStatus(otherParticipant.id);
 
   return (
     <div className="flex flex-1 flex-col bg-ec-bg-primary">
@@ -63,7 +64,7 @@ export default function DMChatArea() {
           avatarUrl={otherParticipant.avatarUrl}
           size={24}
           showStatus
-          online={isOnline}
+          status={otherStatus}
         />
         <h3 className="font-semibold text-ec-text-primary">
           {otherParticipant.displayName}

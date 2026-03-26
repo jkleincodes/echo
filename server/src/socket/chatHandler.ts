@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { MESSAGE_INCLUDE, serializeMessage, aggregateReactions } from '../lib/serializers.js';
 import { clearTypingForUser } from './typingHandler.js';
-import { getSocketIdsForUser } from './presenceHandler.js';
+import { getSocketIdsForUser, getApparentStatus } from './presenceHandler.js';
 import { shouldNotifyUser } from '../lib/notificationHelper.js';
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -144,7 +144,7 @@ export async function emitUnreadUpdates(
         mentionHere,
       );
 
-      if (shouldNotify) {
+      if (shouldNotify && getApparentStatus(member.userId) !== 'dnd') {
         for (const sid of socketIds) {
           io.to(sid).emit('notification:push', {
             type: 'channel_message',

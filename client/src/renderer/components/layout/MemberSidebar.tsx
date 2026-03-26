@@ -7,7 +7,7 @@ import { api } from '../../lib/api';
 import Avatar from '../ui/Avatar';
 import ContextMenu, { type ContextMenuItem } from '../ui/ContextMenu';
 import UserProfileModal from '../modals/UserProfileModal';
-import type { Member, Role } from '../../../../../shared/types';
+import type { Member, Role, UserStatus } from '../../../../../shared/types';
 
 function getRoleColor(memberRoles?: { role: Role }[]): string | undefined {
   if (!memberRoles || memberRoles.length === 0) return undefined;
@@ -24,17 +24,31 @@ interface MemberContextMenu {
   member: Member;
 }
 
+const STATUS_ORDER: Record<UserStatus, number> = {
+  online: 0,
+  idle: 1,
+  dnd: 2,
+  invisible: 3,
+  offline: 3,
+};
+
 export default function MemberSidebar() {
   const members = useServerStore((s) => s.members);
   const activeServerId = useServerStore((s) => s.activeServerId);
   const removeMember = useServerStore((s) => s.removeMember);
-  const onlineUsers = usePresenceStore((s) => s.onlineUsers);
+  const getStatus = usePresenceStore((s) => s.getStatus);
+  const userStatuses = usePresenceStore((s) => s.userStatuses); // subscribe to changes
   const { canKickMembers, isOwner } = usePermissions();
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<MemberContextMenu | null>(null);
 
-  const onlineMembers = members.filter((m) => onlineUsers.has(m.userId));
-  const offlineMembers = members.filter((m) => !onlineUsers.has(m.userId));
+  const onlineMembers = members.filter((m) => getStatus(m.userId) === 'online');
+  const idleMembers = members.filter((m) => getStatus(m.userId) === 'idle');
+  const dndMembers = members.filter((m) => getStatus(m.userId) === 'dnd');
+  const offlineMembers = members.filter((m) => {
+    const s = getStatus(m.userId);
+    return s === 'offline' || s === 'invisible';
+  });
 
   const handleContextMenu = (e: MouseEvent, member: Member) => {
     // Only show for users with kick permission, and never for the owner
@@ -86,44 +100,33 @@ export default function MemberSidebar() {
     ];
   };
 
+  const renderSection = (title: string, sectionMembers: Member[], status: UserStatus) => {
+    if (sectionMembers.length === 0) return null;
+    return (
+      <div className="mb-2">
+        <h3 className="mb-1 px-2 text-xs font-semibold uppercase text-ec-text-muted">
+          {title} — {sectionMembers.length}
+        </h3>
+        {sectionMembers.map((member) => (
+          <MemberItem
+            key={member.id}
+            member={member}
+            status={status}
+            onClick={() => setProfileUserId(member.userId)}
+            onContextMenu={(e) => handleContextMenu(e, member)}
+          />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="scrollbar-echo w-60 shrink-0 overflow-y-auto bg-ec-bg-secondary px-2 pt-6">
-        {/* Online */}
-        {onlineMembers.length > 0 && (
-          <div className="mb-2">
-            <h3 className="mb-1 px-2 text-xs font-semibold uppercase text-ec-text-muted">
-              Online — {onlineMembers.length}
-            </h3>
-            {onlineMembers.map((member) => (
-              <MemberItem
-                key={member.id}
-                member={member}
-                online
-                onClick={() => setProfileUserId(member.userId)}
-                onContextMenu={(e) => handleContextMenu(e, member)}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Offline */}
-        {offlineMembers.length > 0 && (
-          <div className="mb-2">
-            <h3 className="mb-1 px-2 text-xs font-semibold uppercase text-ec-text-muted">
-              Offline — {offlineMembers.length}
-            </h3>
-            {offlineMembers.map((member) => (
-              <MemberItem
-                key={member.id}
-                member={member}
-                online={false}
-                onClick={() => setProfileUserId(member.userId)}
-                onContextMenu={(e) => handleContextMenu(e, member)}
-              />
-            ))}
-          </div>
-        )}
+        {renderSection('Online', onlineMembers, 'online')}
+        {renderSection('Idle', idleMembers, 'idle')}
+        {renderSection('Do Not Disturb', dndMembers, 'dnd')}
+        {renderSection('Offline', offlineMembers, 'offline')}
       </div>
 
       {/* Context menu */}
@@ -146,15 +149,16 @@ export default function MemberSidebar() {
   );
 }
 
-function MemberItem({ member, online, onClick, onContextMenu }: { member: Member; online: boolean; onClick: () => void; onContextMenu: (e: MouseEvent) => void }) {
+function MemberItem({ member, status, onClick, onContextMenu }: { member: Member; status: UserStatus; onClick: () => void; onContextMenu: (e: MouseEvent) => void }) {
   const roleColor = getRoleColor(member.memberRoles);
+  const isOffline = status === 'offline' || status === 'invisible';
 
   return (
     <button
       onClick={onClick}
       onContextMenu={onContextMenu}
       className={`flex w-full items-center gap-3 rounded px-2 py-1.5 text-left hover:bg-ec-bg-modifier-hover ${
-        !online ? 'opacity-40' : ''
+        isOffline ? 'opacity-40' : status === 'idle' ? 'opacity-70' : ''
       }`}
     >
       <Avatar
@@ -162,15 +166,20 @@ function MemberItem({ member, online, onClick, onContextMenu }: { member: Member
         avatarUrl={member.user.avatarUrl}
         size={32}
         showStatus
-        online={online}
+        status={status}
       />
       <div className="min-w-0">
         <p className="truncate text-sm font-medium" style={roleColor ? { color: roleColor } : { color: 'var(--ec-text-secondary, #b5bac1)' }}>
           {member.user.displayName}
         </p>
-        {member.role !== 'member' && (
+        {(member.user.customStatus || member.user.customStatusEmoji) ? (
+          <p className="truncate text-xs text-ec-text-muted">
+            {member.user.customStatusEmoji && <span className="mr-0.5">{member.user.customStatusEmoji}</span>}
+            {member.user.customStatus}
+          </p>
+        ) : member.role !== 'member' ? (
           <p className="text-xs text-ec-text-muted capitalize">{member.role}</p>
-        )}
+        ) : null}
       </div>
     </button>
   );

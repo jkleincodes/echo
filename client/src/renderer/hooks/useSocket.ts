@@ -25,9 +25,8 @@ export function useSocket() {
   const updateEmbeds = useMessageStore((s) => s.updateEmbeds);
   const pinMessage = useMessageStore((s) => s.pinMessage);
   const unpinMessage = useMessageStore((s) => s.unpinMessage);
-  const setOnlineUsers = usePresenceStore((s) => s.setOnlineUsers);
-  const setUserOnline = usePresenceStore((s) => s.setUserOnline);
-  const setUserOffline = usePresenceStore((s) => s.setUserOffline);
+  const setUserStatuses = usePresenceStore((s) => s.setUserStatuses);
+  const setUserStatus = usePresenceStore((s) => s.setUserStatus);
   const addChannel = useServerStore((s) => s.addChannel);
   const updateChannel = useServerStore((s) => s.updateChannel);
   const removeChannel = useServerStore((s) => s.removeChannel);
@@ -99,9 +98,26 @@ export function useSocket() {
       'message:pinned': (message: Message) => pinMessage(message),
       'message:unpinned': (data: { messageId: string; channelId: string }) =>
         unpinMessage(data.messageId, data.channelId),
-      'presence:online-users': (userIds: string[]) => setOnlineUsers(userIds),
-      'user:online': (userId: string) => setUserOnline(userId),
-      'user:offline': (userId: string) => setUserOffline(userId),
+      'presence:user-statuses': (statuses: Record<string, import('../../../../shared/types').UserStatus>) => {
+        // Ensure the current user is always included as online in the presence map
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser && !statuses[currentUser.id]) {
+          statuses[currentUser.id] = currentUser.status === 'invisible' ? 'offline' : (currentUser.status || 'online');
+        }
+        setUserStatuses(statuses);
+      },
+      'user:status-changed': (data: { userId: string; status: import('../../../../shared/types').UserStatus }) => {
+        setUserStatus(data.userId, data.status);
+      },
+      'presence:my-status': (data: { status: import('../../../../shared/types').UserStatus }) => {
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser) {
+          useAuthStore.setState({ user: { ...currentUser, status: data.status } });
+          // Also update presence store so the member sidebar reflects our status
+          const apparent = data.status === 'invisible' ? 'offline' : data.status;
+          setUserStatus(currentUser.id, apparent);
+        }
+      },
       'user:updated': (user: User) => updateMemberUser(user),
       'server:updated': (server: Server) => updateServer(server),
       'channel:created': (channel: Channel) => addChannel(channel),
@@ -329,6 +345,9 @@ export function useSocket() {
         // Skip if desktop notifications are disabled
         if (!useNotificationStore.getState().desktopNotificationsEnabled) return;
 
+        // Skip sounds and desktop notifications if user is DND (unread counts still update)
+        if (useAuthStore.getState().user?.status === 'dnd') return;
+
         playSoundEffect('notification');
 
         // Skip if user is currently viewing the channel/DM/thread AND window is focused
@@ -357,10 +376,16 @@ export function useSocket() {
       socket.on(event, handler as any);
     }
 
+    // Send heartbeat every 30 seconds for server-side idle detection
+    const heartbeatInterval = setInterval(() => {
+      socket.emit('presence:heartbeat');
+    }, 30_000);
+
     return () => {
       for (const [event, handler] of Object.entries(handlers)) {
         socket.off(event, handler as any);
       }
+      clearInterval(heartbeatInterval);
     };
-  }, [addMessage, removeMessage, updateMessage, updateReactions, updateEmbeds, pinMessage, unpinMessage, setOnlineUsers, setUserOnline, setUserOffline, updateMemberUser, updateServer, addChannel, updateChannel, removeChannel, setChannels, addMember, removeMember, addParticipant, removeParticipant, setChannelParticipants, addChannelParticipant, removeChannelParticipant, setUserVoiceState, setAllVoiceStates, removeUserVoiceState, setUserMediaState, setAllMediaStates, removeUserMediaState, addTyping, removeTyping, addFriendship, updateFriendship, removeFriendship, addDMMessage, updateDMMessage, removeDMMessage, addDMChannel, setUnread, setBulkUnread, clearUnread, clearThreadUnread, addThreadMessage, removeThreadMessage, updateThreadMessage, updateThreadReactions, updateThreadEmbeds, updateThread]);
+  }, [addMessage, removeMessage, updateMessage, updateReactions, updateEmbeds, pinMessage, unpinMessage, setUserStatuses, setUserStatus, updateMemberUser, updateServer, addChannel, updateChannel, removeChannel, setChannels, addMember, removeMember, addParticipant, removeParticipant, setChannelParticipants, addChannelParticipant, removeChannelParticipant, setUserVoiceState, setAllVoiceStates, removeUserVoiceState, setUserMediaState, setAllMediaStates, removeUserMediaState, addTyping, removeTyping, addFriendship, updateFriendship, removeFriendship, addDMMessage, updateDMMessage, removeDMMessage, addDMChannel, setUnread, setBulkUnread, clearUnread, clearThreadUnread, addThreadMessage, removeThreadMessage, updateThreadMessage, updateThreadReactions, updateThreadEmbeds, updateThread]);
 }

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { THREAD_MESSAGE_INCLUDE, serializeMessage, aggregateReactions } from '../lib/serializers.js';
-import { getSocketIdsForUser } from './presenceHandler.js';
+import { getSocketIdsForUser, getApparentStatus } from './presenceHandler.js';
 import { shouldNotifyUser } from '../lib/notificationHelper.js';
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -131,7 +131,7 @@ async function emitThreadUnreadUpdates(io: Server, threadId: string, authorId: s
         false, // threads don't support @here
       );
 
-      if (shouldNotify) {
+      if (shouldNotify && getApparentStatus(participant.userId) !== 'dnd') {
         for (const sid of socketIds) {
           io.to(sid).emit('notification:push', {
             type: 'thread_message',

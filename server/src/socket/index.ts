@@ -2,7 +2,7 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { registerChatHandler } from './chatHandler.js';
-import { registerPresenceHandler, getOnlineUserIds } from './presenceHandler.js';
+import { registerPresenceHandler, getUserStatuses, startIdleDetection } from './presenceHandler.js';
 import { registerVoiceHandler, getAllVoiceChannelUsers, getAllVoiceStates, getAllMediaStates, startAfkChecker } from './voiceHandler.js';
 import { registerTypingHandler } from './typingHandler.js';
 import { registerDMHandler } from './dmHandler.js';
@@ -46,8 +46,8 @@ export function createSocketServer(httpServer: HttpServer): Server {
     registerSoundboardHandler(io, socket, userId);
     registerThreadHandler(io, socket, userId);
 
-    // Send current online users (after registerPresenceHandler so own user is included)
-    socket.emit('presence:online-users', getOnlineUserIds());
+    // Send current user statuses (after registerPresenceHandler so own user is included)
+    socket.emit('presence:user-statuses', getUserStatuses());
 
     // Send current voice channel participants
     const voiceState = getAllVoiceChannelUsers();
@@ -82,6 +82,9 @@ export function createSocketServer(httpServer: HttpServer): Server {
 
   // Start AFK checker
   startAfkChecker(io);
+
+  // Start server-side idle detection
+  startIdleDetection(io);
 
   return io;
 }

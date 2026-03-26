@@ -12,7 +12,8 @@ import type { DMChannel } from '../../../../../shared/types';
 export default function DMSidebar() {
   const { channels, activeDMChannelId, setActiveDMChannel, fetchChannels } = useDMStore();
   const currentUserId = useAuthStore((s) => s.user?.id);
-  const onlineUsers = usePresenceStore((s) => s.onlineUsers);
+  const getStatus = usePresenceStore((s) => s.getStatus);
+  const userStatuses = usePresenceStore((s) => s.userStatuses); // subscribe to changes
   const setShowHome = useServerStore((s) => s.setShowHome);
   const unreads = useUnreadStore((s) => s.unreads);
 
@@ -78,7 +79,7 @@ export default function DMSidebar() {
             if (!otherUser) return null;
 
             const isActive = channel.id === activeDMChannelId;
-            const isOnline = onlineUsers.has(otherUser.id);
+            const otherStatus = getStatus(otherUser.id);
             const unread = unreads.get(channel.id);
             const hasUnread = unread && unread.count > 0;
 
@@ -99,7 +100,7 @@ export default function DMSidebar() {
                   avatarUrl={otherUser.avatarUrl}
                   size={32}
                   showStatus
-                  online={isOnline}
+                  status={otherStatus}
                 />
                 <div className="min-w-0 flex-1">
                   <p className={`truncate text-sm ${hasUnread && !isActive ? 'font-bold' : 'font-medium'}`}>{otherUser.displayName}</p>

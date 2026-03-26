@@ -85,7 +85,7 @@ describe('DMChatArea', () => {
 
   it('uses presence store to determine online status', () => {
     useDMStore.setState({ activeDMChannelId: 'dm-alice', channels: [makeDMChannel()] });
-    usePresenceStore.setState({ onlineUsers: new Set(['alice']) });
+    usePresenceStore.setState({ userStatuses: new Map([['alice', 'online']]) });
     renderWithRouter(<DMChatArea />);
     // The header should render with Alice's name; online status is passed to Avatar internally
     expect(screen.getByText('Alice')).toBeInTheDocument();

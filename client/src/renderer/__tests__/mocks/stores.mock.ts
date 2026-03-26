@@ -150,7 +150,7 @@ export function resetAllStores() {
   });
 
   usePresenceStore.setState({
-    onlineUsers: new Set(),
+    userStatuses: new Map(),
   });
 
   useTypingStore.setState({

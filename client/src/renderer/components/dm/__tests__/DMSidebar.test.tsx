@@ -109,7 +109,7 @@ describe('DMSidebar', () => {
   it('reflects online status from presence store', () => {
     const channels = [makeDMChannel('alice', alice)];
     useDMStore.setState({ channels });
-    usePresenceStore.setState({ onlineUsers: new Set(['alice']) });
+    usePresenceStore.setState({ userStatuses: new Map([['alice', 'online']]) });
     renderWithRouter(<DMSidebar />);
     // Alice's channel entry should be rendered (online status is passed to Avatar)
     expect(screen.getByText('Alice')).toBeInTheDocument();

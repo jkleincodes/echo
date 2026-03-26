@@ -1,37 +1,52 @@
 import { create } from 'zustand';
+import type { UserStatus } from '../../../../shared/types';
 
 interface PresenceState {
-  onlineUsers: Set<string>;
-  setOnlineUsers: (userIds: string[]) => void;
-  setUserOnline: (userId: string) => void;
-  setUserOffline: (userId: string) => void;
+  userStatuses: Map<string, UserStatus>;
+  setUserStatuses: (statuses: Record<string, UserStatus>) => void;
+  setUserStatus: (userId: string, status: UserStatus) => void;
+  removeUser: (userId: string) => void;
+  getStatus: (userId: string) => UserStatus;
+  isOnline: (userId: string) => boolean;
   reset: () => void;
 }
 
 export const usePresenceStore = create<PresenceState>((set, get) => ({
-  onlineUsers: new Set(),
+  userStatuses: new Map(),
 
-  setOnlineUsers: (userIds) => {
-    set({ onlineUsers: new Set(userIds) });
+  setUserStatuses: (statuses) => {
+    set({ userStatuses: new Map(Object.entries(statuses)) });
   },
 
-  setUserOnline: (userId) => {
+  setUserStatus: (userId, status) => {
     set((s) => {
-      const onlineUsers = new Set(s.onlineUsers);
-      onlineUsers.add(userId);
-      return { onlineUsers };
+      const userStatuses = new Map(s.userStatuses);
+      if (status === 'offline') {
+        userStatuses.delete(userId);
+      } else {
+        userStatuses.set(userId, status);
+      }
+      return { userStatuses };
     });
   },
 
-  setUserOffline: (userId) => {
+  removeUser: (userId) => {
     set((s) => {
-      const onlineUsers = new Set(s.onlineUsers);
-      onlineUsers.delete(userId);
-      return { onlineUsers };
+      const userStatuses = new Map(s.userStatuses);
+      userStatuses.delete(userId);
+      return { userStatuses };
     });
+  },
+
+  getStatus: (userId) => {
+    return get().userStatuses.get(userId) ?? 'offline';
+  },
+
+  isOnline: (userId) => {
+    return get().userStatuses.has(userId);
   },
 
   reset: () => {
-    set({ onlineUsers: new Set() });
+    set({ userStatuses: new Map() });
   },
 }));

@@ -5,6 +5,7 @@ import { api } from '../../lib/api';
 import { useDMStore } from '../../stores/dmStore';
 import { useServerStore } from '../../stores/serverStore';
 import Avatar from '../ui/Avatar';
+import { usePresenceStore } from '../../stores/presenceStore';
 import type { User, Server } from '../../../../../shared/types';
 import { getServerUrl } from '../../lib/serverUrl';
 
@@ -27,6 +28,8 @@ export default function UserProfileModal({ userId, onClose }: Props) {
   const createOrGetChannel = useDMStore((s) => s.createOrGetChannel);
   const setActiveDMChannel = useDMStore((s) => s.setActiveDMChannel);
   const setShowHome = useServerStore((s) => s.setShowHome);
+  const getStatus = usePresenceStore((s) => s.getStatus);
+  const userStatuses = usePresenceStore((s) => s.userStatuses); // subscribe
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -101,6 +104,8 @@ export default function UserProfileModal({ userId, onClose }: Props) {
                     username={profile.username}
                     avatarUrl={profile.avatarUrl}
                     size={80}
+                    showStatus
+                    status={getStatus(profile.id)}
                   />
                 </div>
               </div>
@@ -126,8 +131,11 @@ export default function UserProfileModal({ userId, onClose }: Props) {
                   <p className="text-xs text-ec-text-muted">{profile.pronouns}</p>
                 )}
 
-                {profile.customStatus && (
-                  <p className="mt-2 text-sm text-ec-text-primary">{profile.customStatus}</p>
+                {(profile.customStatus || profile.customStatusEmoji) && (
+                  <p className="mt-2 text-sm text-ec-text-primary">
+                    {profile.customStatusEmoji && <span className="mr-1">{profile.customStatusEmoji}</span>}
+                    {profile.customStatus}
+                  </p>
                 )}
 
                 <div className="my-3 h-px bg-ec-bg-tertiary" />

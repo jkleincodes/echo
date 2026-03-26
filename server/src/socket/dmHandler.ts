@@ -2,7 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
-import { getSocketIdsForUser } from './presenceHandler.js';
+import { getSocketIdsForUser, getApparentStatus } from './presenceHandler.js';
 
 const USER_SELECT = { id: true, username: true, displayName: true, avatarUrl: true, status: true };
 
@@ -256,16 +256,18 @@ async function emitDMUnreadUpdates(io: Server, channelId: string, authorId: stri
         });
       }
 
-      // DMs always notify — no server/channel preferences apply
-      for (const sid of socketIds) {
-        io.to(sid).emit('notification:push', {
-          type: 'dm_message',
-          title: author?.displayName ?? 'Direct Message',
-          body: 'Sent you a message',
-          authorName: author?.displayName ?? 'Unknown',
-          authorAvatarUrl: author?.avatarUrl ?? null,
-          channelId,
-        });
+      // DMs always notify — no server/channel preferences apply (unless DND)
+      if (getApparentStatus(participant.userId) !== 'dnd') {
+        for (const sid of socketIds) {
+          io.to(sid).emit('notification:push', {
+            type: 'dm_message',
+            title: author?.displayName ?? 'Direct Message',
+            body: 'Sent you a message',
+            authorName: author?.displayName ?? 'Unknown',
+            authorAvatarUrl: author?.avatarUrl ?? null,
+            channelId,
+          });
+        }
       }
     }
   } catch (err) {

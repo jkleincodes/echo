@@ -30,6 +30,8 @@
   --color-ec-input-bg: #1e1f22;
 
   --color-ec-status-online: #23a559;
+  --color-ec-status-idle: #f0b232;
+  --color-ec-status-dnd: #f23f43;
   --color-ec-status-offline: #80848e;
 }
 

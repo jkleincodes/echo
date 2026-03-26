@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSocket } from '../../hooks/useSocket';
+import { useIdleDetection } from '../../hooks/useIdleDetection';
 import { useServerStore } from '../../stores/serverStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useVoiceStore } from '../../stores/voiceStore';
@@ -18,6 +19,7 @@ import UserSettingsModal from '../modals/UserSettingsModal';
 
 export default function AppLayout() {
   useSocket();
+  useIdleDetection();
   const { activeServerId, showHome, fetchServers } = useServerStore();
   const voiceConnected = useVoiceStore((s) => s.connected);
   const videoOverlayOpen = useVoiceStore((s) => s.videoOverlayOpen);
@@ -85,7 +87,7 @@ export default function AppLayout() {
               className="absolute bottom-3 left-0 z-10 flex w-[72px] justify-center"
               title="User Settings"
             >
-              <Avatar username={user.displayName} avatarUrl={user.avatarUrl} size={40} showStatus online />
+              <Avatar username={user.displayName} avatarUrl={user.avatarUrl} size={40} showStatus status={user.status} />
             </button>
             {showSettings && <UserSettingsModal onClose={() => setShowSettings(false)} />}
           </>
