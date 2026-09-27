@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MessageCircle, LogOut } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
@@ -7,6 +7,9 @@ import { api } from '../lib/api';
 export default function Layout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  // The landing page has its own manga look; every other page keeps the app theme.
+  const landing = useLocation().pathname === '/';
+  const pick = (landingCls: string, appCls: string) => (landing ? landingCls : appCls);
 
   const [showSuggestionForm, setShowSuggestionForm] = useState(false);
   const [suggestionName, setSuggestionName] = useState('');
@@ -45,22 +48,22 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-ec-bg-tertiary">
-      <nav className="flex items-center justify-between border-b border-ec-bg-primary px-6 py-3">
-        <Link to="/" className="flex items-center gap-2 text-xl font-bold text-ec-text-primary">
-          <MessageCircle size={28} className="text-accent" />
+    <div className={pick('sh flex min-h-screen flex-col', 'flex min-h-screen flex-col bg-ec-bg-tertiary')}>
+      <nav className={pick('flex items-center justify-between border-b-4 border-[var(--ink)] px-6 py-3', 'flex items-center justify-between border-b border-ec-bg-primary px-6 py-3')}>
+        <Link to="/" className={pick('sh-display flex items-center gap-2 text-2xl', 'flex items-center gap-2 text-xl font-bold text-ec-text-primary')}>
+          <MessageCircle size={28} strokeWidth={pick('2.75', '2')} className="text-accent" />
           Echo
         </Link>
 
         <div className="flex items-center gap-4">
           {user ? (
             <>
-              <span className="text-sm text-ec-text-secondary">
+              <span className={pick('text-sm font-bold', 'text-sm text-ec-text-secondary')}>
                 {user.displayName}
               </span>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 rounded bg-ec-bg-primary px-3 py-1.5 text-sm text-ec-text-secondary hover:text-ec-text-primary"
+                className={pick('sh-btn sh-btn-ghost px-3 py-1.5 text-sm', 'flex items-center gap-1.5 rounded bg-ec-bg-primary px-3 py-1.5 text-sm text-ec-text-secondary hover:text-ec-text-primary')}
               >
                 <LogOut size={16} />
                 Log Out
@@ -70,13 +73,13 @@ export default function Layout() {
             <>
               <Link
                 to="/login"
-                className="rounded px-4 py-2 text-sm font-medium text-ec-text-primary hover:underline"
+                className={pick('px-4 py-2 text-sm font-bold hover:underline', 'rounded px-4 py-2 text-sm font-medium text-ec-text-primary hover:underline')}
               >
                 Log In
               </Link>
               <Link
                 to="/register"
-                className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-dark"
+                className={pick('sh-btn sh-btn-primary px-4 py-2 text-sm', 'rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-dark')}
               >
                 Sign Up
               </Link>
@@ -89,14 +92,14 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-ec-bg-primary px-6 py-4 text-center text-sm text-ec-text-muted">
+      <footer className={pick('border-t-4 border-[var(--ink)] px-6 py-4 text-center text-sm font-semibold', 'border-t border-ec-bg-primary px-6 py-4 text-center text-sm text-ec-text-muted')}>
         <p>Echo &mdash; Open-source communication platform</p>
 
         <div className="mt-2">
           {!showSuggestionForm ? (
             <button
               onClick={() => setShowSuggestionForm(true)}
-              className="text-ec-text-muted underline hover:text-ec-text-secondary"
+              className={pick('underline', 'text-ec-text-muted underline hover:text-ec-text-secondary')}
             >
               Have a suggestion?
             </button>

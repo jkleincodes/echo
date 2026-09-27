@@ -1,0 +1,313 @@
+/* ── Landing page: shōnen manga look ──
+   Everything is scoped under .sh so other pages keep the app theme. */
+
+.sh {
+  --paper: #f4efe4;
+  --ink: #0d0d0f;
+  --blue: #0ea5e9;
+  --red: #ff2d3a;
+  --yellow: #ffd400;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --display: 'Dela Gothic One', 'Inter', system-ui, sans-serif;
+
+  background: var(--paper);
+  color: var(--ink);
+  overflow-x: clip;
+}
+
+.sh ::selection {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+.sh-display {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* ── Texture ── */
+
+.sh-halftone {
+  background-image: radial-gradient(var(--ink) 1.1px, transparent 1.5px);
+  background-size: 7px 7px;
+}
+
+.sh-speedlines {
+  position: absolute;
+  inset: -60%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    var(--ink) 0deg 0.6deg,
+    transparent 0.6deg 3.1deg,
+    var(--ink) 3.1deg 3.5deg,
+    transparent 3.5deg 7deg
+  );
+  mask-image: radial-gradient(circle, transparent 18%, #000 55%);
+  -webkit-mask-image: radial-gradient(circle, transparent 18%, #000 55%);
+  animation: sh-spin 90s linear infinite;
+  pointer-events: none;
+}
+
+/* ── Panels ── */
+
+.sh-panel {
+  position: relative;
+  background: #fff;
+  border: 4px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.sh-tag {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+/* Resting tilt, kept apart from animated transforms */
+.sh-tilt {
+  rotate: var(--tilt, 0deg);
+}
+
+/* ── Buttons ── */
+
+.sh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  font-weight: 700;
+  transition:
+    transform 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out),
+    background-color 140ms ease;
+}
+
+.sh-btn:active {
+  transform: translate(5px, 5px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.sh-btn-primary {
+  background: var(--blue);
+  color: #fff;
+}
+
+.sh-btn-ghost {
+  background: #fff;
+  color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sh-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--ink);
+  }
+  .sh-btn:active {
+    transform: translate(5px, 5px);
+    box-shadow: 0 0 0 var(--ink);
+  }
+  .sh-btn-ghost:hover {
+    background: var(--yellow);
+  }
+  .sh-shake:hover {
+    animation: sh-shake 280ms linear 2;
+  }
+}
+
+/* ── Hero entrance ── */
+
+.sh-slam {
+  display: block;
+  opacity: 0;
+  animation: sh-slam 520ms var(--ease-out) both;
+}
+
+.sh-pop {
+  opacity: 0;
+  animation: sh-pop 420ms var(--ease-out) both;
+}
+
+.sh-impact {
+  animation: sh-shake 260ms linear 1;
+}
+
+.sh-burst {
+  animation: sh-spin 40s linear infinite;
+}
+
+/* Voice rings on the speaking avatar */
+.sh-ring {
+  position: absolute;
+  inset: -4px;
+  border: 3px solid var(--blue);
+  border-radius: 9999px;
+  opacity: 0;
+  animation: sh-ring 1.4s var(--ease-out) infinite;
+}
+
+/* Speech bubble */
+.sh-bubble {
+  position: relative;
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 9999px;
+}
+
+.sh-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -14px;
+  left: 28%;
+  width: 18px;
+  height: 16px;
+  background: var(--ink);
+  clip-path: polygon(0 0, 100% 0, 10% 100%);
+}
+
+/* ── Ticker band ── */
+
+.sh-ticker {
+  display: flex;
+  width: max-content;
+  animation: sh-marquee 26s linear infinite;
+}
+
+/* ── Scroll reveal ──
+   Children with .sh-in slam in when their section enters view. */
+
+.sh-reveal .sh-in {
+  opacity: 0;
+}
+
+.sh-reveal[data-visible='true'] .sh-in {
+  animation: sh-panel-in 560ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+
+/* SFX lettering on feature panels */
+.sh-sfx {
+  position: absolute;
+  top: -1.4rem;
+  right: -0.6rem;
+  font-family: var(--display);
+  font-size: 2.4rem;
+  color: var(--red);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  transform: rotate(-12deg);
+  transition: transform 180ms var(--ease-out);
+  pointer-events: none;
+}
+
+.sh-feature {
+  transition:
+    transform 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sh-feature:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 12px 12px 0 var(--ink);
+  }
+  .sh-feature:hover .sh-sfx {
+    transform: rotate(-4deg) scale(1.25);
+  }
+}
+
+/* Terminal lines type themselves out */
+.sh-type {
+  display: block;
+  white-space: nowrap;
+  clip-path: inset(0 100% 0 0);
+}
+
+.sh-reveal[data-visible='true'] .sh-type {
+  animation: sh-type 900ms steps(var(--n, 30)) both;
+  animation-delay: calc(300ms + var(--i, 0) * 950ms);
+}
+
+/* ── Keyframes ── */
+
+@keyframes sh-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sh-slam {
+  0% { opacity: 0; transform: translateX(-14%) scale(1.3); }
+  55% { opacity: 1; transform: translateX(1.5%) scale(0.97); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes sh-pop {
+  0% { opacity: 0; transform: scale(0.9) rotate(-6deg); }
+  60% { opacity: 1; transform: scale(1.04) rotate(1deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes sh-panel-in {
+  0% { opacity: 0; transform: translateY(48px) scale(1.08) rotate(-3deg); }
+  60% { opacity: 1; transform: translateY(-4px) scale(0.98) rotate(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+
+@keyframes sh-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-4px, 2px); }
+  40% { transform: translate(4px, -2px); }
+  60% { transform: translate(-3px, -1px); }
+  80% { transform: translate(3px, 1px); }
+}
+
+@keyframes sh-ring {
+  0% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+
+@keyframes sh-marquee {
+  to { transform: translateX(-50%); }
+}
+
+@keyframes sh-type {
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes sh-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Reduced motion: fades only, nothing moves ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-speedlines,
+  .sh-burst,
+  .sh-ticker,
+  .sh-ring,
+  .sh-impact {
+    animation: none;
+  }
+  .sh-slam,
+  .sh-pop,
+  .sh-reveal[data-visible='true'] .sh-in {
+    animation: sh-fade 300ms ease both;
+  }
+  .sh-reveal[data-visible='true'] .sh-type {
+    animation: none;
+    clip-path: none;
+  }
+  .sh-btn,
+  .sh-feature,
+  .sh-sfx {
+    transition: none;
+  }
+  .sh-shake:hover {
+    animation: none;
+  }
+}
